@@ -15,3 +15,11 @@ For Homebrew or Linuxbrew installations:
 
    # --force uninstalls all versions of DC/OS E2E which have been installed.
    brew uninstall dcose2e --force
+
+For installations from prebuilt packages:
+
+.. code:: sh
+
+   rm -f /usr/local/bin/dcos-docker
+   rm -f /usr/local/bin/dcos-vagrant
+   rm -f /usr/local/bin/dcos-aws

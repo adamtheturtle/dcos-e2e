@@ -4,13 +4,16 @@ Release the next version of DC/OS E2E.
 
 import datetime
 import re
+import subprocess
 from pathlib import Path
+from typing import List
 
 import click
 from dulwich.porcelain import add, commit, push, tag_list
 from dulwich.repo import Repo
 from github import Github, Repository, UnknownObjectException
 
+from binaries import make_linux_binaries
 from homebrew import get_homebrew_formula
 
 
@@ -50,6 +53,7 @@ def update_changelog(version: str) -> None:
 def create_github_release(
     repository: Repository,
     version: str,
+    artifacts: List[Path],
 ) -> None:
     """
     Create a tag and release on GitHub.
@@ -66,6 +70,12 @@ def create_github_release(
         object=repository.get_commits()[0].sha,
         draft=True,
     )
+    for artifact_path in artifacts:
+        github_release.upload_asset(
+            path=str(artifact_path),
+            label=artifact_path.name,
+            # content_type="",
+        )
     github_release.update_release(
         name=release_name,
         message=release_message,
@@ -151,10 +161,12 @@ def release(github_token: str, github_owner: str) -> None:
         repository=repository,
     )
     update_vagrantfile(version=version_str)
+    linux_artifacts = make_linux_binaries()
     commit_and_push(version=version_str, repository=repository)
     create_github_release(
         repository=repository,
         version=version_str,
+        artifacts=linux_artifacts,
     )
 
 
