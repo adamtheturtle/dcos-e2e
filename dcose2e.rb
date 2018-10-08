@@ -1,7 +1,7 @@
 class Dcose2e < Formula
   include Language::Python::Virtualenv
 
-  url "https://codeload.github.com/adamtheturtle/dcos-e2e/legacy.tar.gz/2018.10.08.0"
+  url "https://codeload.github.com/adamtheturtle/dcos-e2e/legacy.tar.gz/2018.10.08.1"
   head "https://github.com/adamtheturtle/dcos-e2e.git"
   homepage "http://dcos-e2e.readthedocs.io/en/latest/cli.html"
   depends_on "python3"
