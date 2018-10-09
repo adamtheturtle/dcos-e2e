@@ -1,7 +1,7 @@
 class Dcose2e < Formula
   include Language::Python::Virtualenv
 
-  url "https://codeload.github.com/adamtheturtle/dcos-e2e/legacy.tar.gz/2018.10.08.1"
+  url "https://codeload.github.com/adamtheturtle/dcos-e2e/legacy.tar.gz/2018.10.09.0"
   head "https://github.com/adamtheturtle/dcos-e2e.git"
   homepage "http://dcos-e2e.readthedocs.io/en/latest/cli.html"
   depends_on "python3"
@@ -193,8 +193,8 @@ class Dcose2e < Formula
   end
 
   resource "msrest" do
-    url "https://files.pythonhosted.org/packages/c7/e7/99e7554fe5d910c706837bf7f5e6ac196030c9874ba0d989419d4cf4fa1c/msrest-0.5.5.tar.gz"
-    sha256 "af00590fb26a2203a8aa93e0a645a617f9c8fd5858f7ef079817a762a1ceb68f"
+    url "https://files.pythonhosted.org/packages/df/d9/4587f9b6a75c35bf5fb6f65962115ffbab2490bf20811972756de34461b4/msrest-0.6.0.tar.gz"
+    sha256 "6ff380d3f5251459ba8489718a010b7c4dc74654a079268f681d7dbc12672235"
   end
 
   resource "msrestazure" do
