@@ -1,15 +1,15 @@
 class Dcose2e < Formula
   include Language::Python::Virtualenv
 
-  url "https://codeload.github.com/adamtheturtle/dcos-e2e/legacy.tar.gz/2018.10.09.1"
+  url "https://codeload.github.com/adamtheturtle/dcos-e2e/legacy.tar.gz/2018.11.13.0"
   head "https://github.com/adamtheturtle/dcos-e2e.git"
   homepage "http://dcos-e2e.readthedocs.io/en/latest/cli.html"
   depends_on "python3"
   depends_on "pkg-config"
 
   resource "adal" do
-    url "https://files.pythonhosted.org/packages/e4/02/a8e2087320ec2e505820a5743fd48918c7bb64acbefe69656af99ebe07eb/adal-1.1.0.tar.gz"
-    sha256 "a2a2f7e4a2d2e2014e3d5ff9f6d614af280c879a1dbf96bb64d92d85a814a645"
+    url "https://files.pythonhosted.org/packages/0f/ba/07dbea5f63937c4a9a10946107d72b03354f65a51f9e0602314193fc2bae/adal-1.2.0.tar.gz"
+    sha256 "ba52913c38d76b4a4d88eaab41a5763d056ab6d073f106e0605b051ab930f5c1"
   end
 
   resource "asn1crypto" do
@@ -73,8 +73,8 @@ class Dcose2e < Formula
   end
 
   resource "cachetools" do
-    url "https://files.pythonhosted.org/packages/87/41/b3e00059f3c34b57a653d2120d213715abb4327b36fee22e59c1da977d25/cachetools-2.1.0.tar.gz"
-    sha256 "90f1d559512fc073483fe573ef5ceb39bf6ad3d39edc98dc55178a2b2b176fa3"
+    url "https://files.pythonhosted.org/packages/e6/28/7cde8e73835ff48b4f35b2d93a509575f7bc02b7d614ada71b820c8d9233/cachetools-3.0.0.tar.gz"
+    sha256 "4621965b0d9d4c82a79a29edbad19946f5e7702df4afae7d1ed2df951559a8cc"
   end
 
   resource "Cerberus" do
@@ -83,8 +83,8 @@ class Dcose2e < Formula
   end
 
   resource "certifi" do
-    url "https://files.pythonhosted.org/packages/e1/0f/f8d5e939184547b3bdc6128551b831a62832713aa98c2ccdf8c47ecc7f17/certifi-2018.8.24.tar.gz"
-    sha256 "376690d6f16d32f9d1fe8932551d80b23e9d393a8578c5633a2ed39a64861638"
+    url "https://files.pythonhosted.org/packages/41/b6/4f0cefba47656583217acd6cd797bc2db1fede0d53090fdc28ad2c8e0716/certifi-2018.10.15.tar.gz"
+    sha256 "6d58c986d22b038c8c0df30d639f23a3e6d172a05c3583e766f4c0b785c0986a"
   end
 
   resource "cffi" do
@@ -148,8 +148,8 @@ class Dcose2e < Formula
   end
 
   resource "google-auth" do
-    url "https://files.pythonhosted.org/packages/7e/cd/dae5c39974b040741215ed346263152c93af21a22dc124c7ad451fbee417/google-auth-1.5.1.tar.gz"
-    sha256 "9ca363facbf2622d9ba828017536ccca2e0f58bd15e659b52f312172f8815530"
+    url "https://files.pythonhosted.org/packages/17/07/3d60e212bff8d734fcf5dd400eee751b8652eaefd0c4d90cd50af92e1d96/google-auth-1.6.1.tar.gz"
+    sha256 "b08a27888e9d1c17a891b3688aacc9c6f2019d7f6c5a2e73588e6bb9a2c0fa98"
   end
 
   resource "google-auth-httplib2" do
@@ -183,8 +183,8 @@ class Dcose2e < Formula
   end
 
   resource "keyring" do
-    url "https://files.pythonhosted.org/packages/7c/c0/4f48b2b1ff9eec624624142e9be28a6c91b494fd1513df4ef7544da3886c/keyring-15.1.0.tar.gz"
-    sha256 "6232b972dfbd44fd9bd649242dbf17f616988b152d4268f9ca1dcc704b467381"
+    url "https://files.pythonhosted.org/packages/ee/79/744da3470d832b776a37ccf2b277339f165ff75827606b073dd653b26bba/keyring-16.0.2.tar.gz"
+    sha256 "95e4f1d0342d0bf5d137d1d2352d59f7abbebb1507bec1ac26831c411ac23150"
   end
 
   resource "more-itertools" do
@@ -193,8 +193,8 @@ class Dcose2e < Formula
   end
 
   resource "msrest" do
-    url "https://files.pythonhosted.org/packages/df/d9/4587f9b6a75c35bf5fb6f65962115ffbab2490bf20811972756de34461b4/msrest-0.6.0.tar.gz"
-    sha256 "6ff380d3f5251459ba8489718a010b7c4dc74654a079268f681d7dbc12672235"
+    url "https://files.pythonhosted.org/packages/f7/63/cf85cfa172be9da3c64c6f1f54430411137b81b398bb0e13a04154e9a6df/msrest-0.6.1.tar.gz"
+    sha256 "c087b91d68281a870e8cdff84f20dd55bbd6685daa76a307493e6e3a4343fc56"
   end
 
   resource "msrestazure" do
@@ -223,8 +223,8 @@ class Dcose2e < Formula
   end
 
   resource "pluggy" do
-    url "https://files.pythonhosted.org/packages/a1/83/ef7d976c12d67a5c7a5bc2a47f0501c926cabae9d9fcfdc26d72abc9ba15/pluggy-0.7.1.tar.gz"
-    sha256 "95eb8364a4708392bae89035f45341871286a333f749c3141c20573d2b3876e1"
+    url "https://files.pythonhosted.org/packages/65/25/81d0de17cd00f8ca994a4e74e3c4baf7cd25072c0b831dad5c7d9d6138f8/pluggy-0.8.0.tar.gz"
+    sha256 "447ba94990e8014ee25ec853339faf7b0fc8050cdc3289d4d71f7f410fb90095"
   end
 
   resource "py" do
@@ -263,8 +263,8 @@ class Dcose2e < Formula
   end
 
   resource "python-dateutil" do
-    url "https://files.pythonhosted.org/packages/a0/b0/a4e3241d2dee665fea11baec21389aec6886655cd4db7647ddf96c3fad15/python-dateutil-2.7.3.tar.gz"
-    sha256 "e27001de32f627c22380a688bcc43ce83504a7bc5da472209b4c70f02829f0b8"
+    url "https://files.pythonhosted.org/packages/0e/01/68747933e8d12263d41ce08119620d9a7e5eb72c876a3442257f74490da0/python-dateutil-2.7.5.tar.gz"
+    sha256 "88f9287c0174266bb0d8cedd395cfba9c58e87e5ad86b2ce58859bc11be3cf02"
   end
 
   resource "python-vagrant" do
@@ -333,8 +333,8 @@ class Dcose2e < Formula
   end
 
   resource "websocket-client" do
-    url "https://files.pythonhosted.org/packages/fb/1f/9acd71b77e66fafb19cfb023e50cbb7ed2c3be3c72db999162bd36c518c4/websocket_client-0.53.0.tar.gz"
-    sha256 "c42b71b68f9ef151433d6dcc6a7cb98ac72d2ad1e3a74981ca22bc5d9134f166"
+    url "https://files.pythonhosted.org/packages/35/d4/14e446a82bc9172d088ebd81c0b02c5ca8481bfeecb13c9ef07998f9249b/websocket_client-0.54.0.tar.gz"
+    sha256 "e51562c91ddb8148e791f0155fdb01325d99bb52c4cdbb291aee7a3563fd0849"
   end
 
 
