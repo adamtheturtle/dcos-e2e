@@ -2,7 +2,6 @@
 Vagrant backend.
 """
 
-import inspect
 import os
 import shutil
 import uuid
@@ -11,9 +10,9 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import Any, Dict, Iterable, Optional, Set, Tuple, Type
 
-from dcos_e2e.node import Node
-
-from .._base_classes import ClusterBackend, ClusterManager
+from dcos_e2e.base_classes import ClusterBackend, ClusterManager
+from dcos_e2e.cluster import Cluster
+from dcos_e2e.node import Node, Output
 
 
 class Vagrant(ClusterBackend):
@@ -25,6 +24,11 @@ class Vagrant(ClusterBackend):
         self,
         virtualbox_description: str = '',
         workspace_dir: Optional[Path] = None,
+        vm_memory_mb: int = 2048,
+        vagrant_box_version: str = '~> 0.10',
+        vagrant_box_url: str = (
+            'https://downloads.dcos.io/dcos-vagrant/metadata.json'
+        ),
     ) -> None:
         """
         Create a configuration for a Vagrant cluster backend.
@@ -36,15 +40,30 @@ class Vagrant(ClusterBackend):
                 :py:func:`tempfile.mkstemp`.
             virtualbox_description: A description string to add to VirtualBox
                 VMs.
+            vm_memory_mb: The amount of memory in megabytes allocated to each
+                VM.
+            vagrant_box_version: The Vagrant box version to use. See
+                https://www.vagrantup.com/docs/boxes/versioning.html#version-constraints
+                for version details.
+            vagrant_box_url: The URL of the Vagrant box to use.
 
         Attributes:
             workspace_dir: The directory in which large temporary files will be
                 created. These files will be deleted at the end of a test run.
             virtualbox_description: A description string to add to VirtualBox
                 VMs.
+            vm_memory_mb: The amount of memory in megabytes allocated to each
+                VM.
+            vagrant_box_version: The Vagrant box version to use. See
+                https://www.vagrantup.com/docs/boxes/versioning.html#version-constraints
+                for version details.
+            vagrant_box_url: The URL of the Vagrant box to use.
         """
         self.workspace_dir = workspace_dir or Path(gettempdir())
         self.virtualbox_description = virtualbox_description
+        self.vm_memory_mb = vm_memory_mb
+        self.vagrant_box_version = vagrant_box_version
+        self.vagrant_box_url = vagrant_box_url
 
     @property
     def cluster_cls(self) -> Type['VagrantCluster']:
@@ -59,9 +78,25 @@ class Vagrant(ClusterBackend):
         """
         Return the path to the Vagrant specific ``ip-detect`` script.
         """
-        current_file = inspect.stack()[0][1]
-        current_parent = Path(os.path.abspath(current_file)).parent
+        current_parent = Path(__file__).parent.resolve()
         return current_parent / 'resources' / 'ip-detect'
+
+    @property
+    def base_config(self) -> Dict[str, Any]:
+        """
+        Return a base configuration for installing DC/OS OSS.
+        """
+        # See https://jira.d2iq.com/browse/DCOS_OSS-2501
+        # for removing "check_time: 'false'".
+        return {
+            'check_time': 'false',
+            'cluster_name': 'DCOS',
+            'exhibitor_storage_backend': 'static',
+            'master_discovery': 'static',
+            'resolvers': ['8.8.8.8'],
+            'ssh_port': 22,
+            'ssh_user': 'vagrant',
+        }
 
 
 class VagrantCluster(ClusterManager):
@@ -111,9 +146,13 @@ class VagrantCluster(ClusterManager):
                 vm_names.append(name)
 
         vagrant_env = {
+            'HOME': os.environ['HOME'],
             'PATH': os.environ['PATH'],
             'VM_NAMES': ','.join(vm_names),
             'VM_DESCRIPTION': cluster_backend.virtualbox_description,
+            'VM_MEMORY': str(cluster_backend.vm_memory_mb),
+            'VAGRANT_BOX_VERSION': str(cluster_backend.vagrant_box_version),
+            'VAGRANT_BOX_URL': cluster_backend.vagrant_box_url,
         }
 
         # We import Vagrant here instead of at the top of the file because, if
@@ -126,57 +165,81 @@ class VagrantCluster(ClusterManager):
             root=str(path),
             env=vagrant_env,
             quiet_stdout=False,
-            quiet_stderr=True,
+            quiet_stderr=False,
         )
 
         self._vagrant_client.up()
 
-    def install_dcos_from_url_with_bootstrap_node(
+    def install_dcos_from_url(
         self,
-        build_artifact: str,
+        dcos_installer: str,
         dcos_config: Dict[str, Any],
         ip_detect_path: Path,
-        log_output_live: bool,
+        output: Output,
         files_to_copy_to_genconf_dir: Iterable[Tuple[Path, Path]],
     ) -> None:
         """
-        Install DC/OS from a build artifact passed as an URL string.
+        Install DC/OS from an installer passed as an URL string.
 
         Args:
-            build_artifact: The URL string to a build artifact to install DC/OS
+            dcos_installer: The URL string to an installer to install DC/OS
                 from.
             dcos_config: The DC/OS configuration to use.
             ip_detect_path: The ``ip-detect`` script that is used for
                 installing DC/OS.
-            log_output_live: If ``True``, log output of the installation live.
+            output: What happens with stdout and stderr.
             files_to_copy_to_genconf_dir: Pairs of host paths to paths on the
                 installer node. This must be empty as it is not currently
                 supported.
         """
-        raise NotImplementedError
+        cluster = Cluster.from_nodes(
+            masters=self.masters,
+            agents=self.agents,
+            public_agents=self.public_agents,
+        )
 
-    def install_dcos_from_path_with_bootstrap_node(
+        cluster.install_dcos_from_url(
+            dcos_installer=dcos_installer,
+            dcos_config=dcos_config,
+            ip_detect_path=ip_detect_path,
+            output=output,
+            files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
+        )
+
+    def install_dcos_from_path(
         self,
-        build_artifact: Path,
+        dcos_installer: Path,
         dcos_config: Dict[str, Any],
         ip_detect_path: Path,
-        log_output_live: bool,
+        output: Output,
         files_to_copy_to_genconf_dir: Iterable[Tuple[Path, Path]],
     ) -> None:
         """
-        Install DC/OS from a build artifact passed as a file system `Path`.
+        Install DC/OS from an installer passed as a file system `Path`.
 
         Args:
-            build_artifact: The path to a build artifact to install DC/OS from.
+            dcos_installer: The path to an installer to install DC/OS from.
             dcos_config: The DC/OS configuration to use.
             ip_detect_path: The ``ip-detect`` script that is used for
                 installing DC/OS.
-            log_output_live: If ``True``, log output of the installation live.
+            output: What happens with stdout and stderr.
             files_to_copy_to_genconf_dir: Pairs of host paths to paths on the
                 installer node. This must be empty as it is not currently
                 supported.
         """
-        raise NotImplementedError
+        cluster = Cluster.from_nodes(
+            masters=self.masters,
+            agents=self.agents,
+            public_agents=self.public_agents,
+        )
+
+        cluster.install_dcos_from_path(
+            dcos_installer=dcos_installer,
+            dcos_config=dcos_config,
+            ip_detect_path=ip_detect_path,
+            output=output,
+            files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
+        )
 
     def destroy_node(self, node: Node) -> None:
         """
@@ -268,18 +331,3 @@ class VagrantCluster(ClusterManager):
         Return all DC/OS public agent :class:`.node.Node` s.
         """
         return self._nodes(node_base_name=self._public_agent_prefix)
-
-    @property
-    def base_config(self) -> Dict[str, Any]:
-        """
-        Return a base configuration for installing DC/OS OSS.
-        """
-        return {
-            'check_time': 'false',
-            'cluster_name': 'DCOS',
-            'exhibitor_storage_backend': 'static',
-            'master_discovery': 'static',
-            'resolvers': ['8.8.8.8'],
-            'ssh_port': 22,
-            'ssh_user': 'vagrant',
-        }

@@ -7,11 +7,22 @@
 # Therefore, we pin a particular version which satisfies all requirements.
 # See DCOS-40131.
 msrestazure==0.4.34
+# ``keyring`` is a requirement of ``msrestazure``.
+# We make sure that we get a version of keyring which is compatible with the
+# pinned version of SecretStorage on Python 3.5+ (compatibility is different
+# on different Python versions).
+keyring==16.0.2
 # Without the following, some users get:
 # The 'secretstorage' distribution was not found and is required by keyring
 SecretStorage==3.1.0
+# Without the following, some users get:
+# ``ModuleNotFoundError: No module named 'keyring.util.escape'``
+#
+# See https://github.com/dcos/dcos-e2e/issues/1643.
+keyrings.alt==3.1.1
 # Requirements from DC/OS Launch
-azure-common==1.1.15
+azure-common==1.1.16
+azure-datalake-store==0.0.40
 azure-mgmt-network==2.2.1
 azure-mgmt-resource==2.0.0
 azure-monitor==0.3.1

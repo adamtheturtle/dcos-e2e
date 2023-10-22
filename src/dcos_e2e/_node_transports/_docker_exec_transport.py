@@ -2,11 +2,8 @@
 Utilities to connect to nodes with Docker exec.
 """
 
-import io
-import os
 import subprocess
-import tarfile
-import uuid
+import sys
 from ipaddress import IPv4Address
 from pathlib import Path
 from typing import Any, Dict, List
@@ -14,10 +11,8 @@ from typing import Any, Dict, List
 import docker
 from docker.models.containers import Container
 
-from dcos_e2e._common import get_logger, run_subprocess
 from dcos_e2e._node_transports._base_classes import NodeTransport
-
-LOGGER = get_logger(__name__)
+from dcos_e2e._subprocess_tools import run_subprocess
 
 
 def _compose_docker_command(
@@ -28,9 +23,12 @@ def _compose_docker_command(
     public_ip_address: IPv4Address,
 ) -> List[str]:
     """
-    Return a command to run ``args`` on a node using ``docker exec``. We do not
-    use ``docker-py`` because ``stdout`` and ``stderr`` cannot be separated in
-    ``docker-py`` https://github.com/docker/docker-py/issues/704.
+    Return a command to run ``args`` on a node using ``docker exec``.
+
+    We use this rather than using ``docker`` via Python for a few reasons.
+    In particular, we would need something like ``dockerpty`` in order to
+    support interaction.
+    We also would need to match the ``Popen`` interface for asynchronous use.
 
     Args:
         args: The command to run on a node.
@@ -45,7 +43,7 @@ def _compose_docker_command(
     Returns:
         The full ``docker exec`` command to be run.
     """
-    container = _get_container_from_ip_address(public_ip_address)
+    container = _container_from_ip_address(ip_address=public_ip_address)
 
     docker_exec_args = [
         'docker',
@@ -54,8 +52,12 @@ def _compose_docker_command(
         user,
     ]
 
-    if tty:
+    # Do not cover this because there is currently no test for
+    # using this in a terminal in the CI.
+    if sys.stdin.isatty():  # pragma: no cover
         docker_exec_args.append('--interactive')
+
+    if tty:
         docker_exec_args.append('--tty')
 
     for key, value in env.items():
@@ -82,6 +84,7 @@ class DockerExecTransport(NodeTransport):
         tty: bool,
         ssh_key_path: Path,
         public_ip_address: IPv4Address,
+        capture_output: bool,
     ) -> subprocess.CompletedProcess:
         """
         Run a command on this node the given user.
@@ -96,11 +99,10 @@ class DockerExecTransport(NodeTransport):
                 values.
             tty: If ``True``, allocate a pseudo-tty. This means that the users
                 terminal is attached to the streams of the process.
-                This means that the values of stdout and stderr will not be in
-                the returned ``subprocess.CompletedProcess``.
             ssh_key_path: The path to an SSH key which can be used to SSH to
                 the node as the ``user`` user.
             public_ip_address: The public IP address of the node.
+            capture_output: Whether to capture output in the result.
 
         Returns:
             The representation of the finished process.
@@ -120,7 +122,7 @@ class DockerExecTransport(NodeTransport):
         return run_subprocess(
             args=docker_exec_args,
             log_output_live=log_output_live,
-            pipe_output=not tty,
+            pipe_output=capture_output,
         )
 
     def popen(
@@ -179,79 +181,53 @@ class DockerExecTransport(NodeTransport):
                 the node as the ``user`` user.
             public_ip_address: The public IP address of the node.
         """
-        # `remote_path` may be a tmpfs mount.
-        # At the time of writing, for example, `/tmp` is a tmpfs mount.
-        # Copying files to tmpfs mounts fails silently.
-        # See https://github.com/moby/moby/issues/22020.
-
-        # Therefore, we create a temporary directory within our home directory,
-        # and we put the file there.
-        # We then move the file from the temporary directory to the intended
-        # destination.
-        # We then remove the temporary directory.
-
-        home_path = self.run(
-            args=['bash', '-c', 'echo $HOME'],
-            user=user,
+        container = _container_from_ip_address(ip_address=public_ip_address)
+        args = [
+            'docker',
+            'cp',
+            str(local_path),
+            container.id + ':' + str(remote_path),
+        ]
+        run_subprocess(
+            args=args,
             log_output_live=False,
-            env={},
-            tty=False,
-            ssh_key_path=ssh_key_path,
-            public_ip_address=public_ip_address,
-        ).stdout.strip().decode()
-
-        tmp_path = '{home}/dcos-docker-{uuid}'.format(
-            home=home_path,
-            uuid=uuid.uuid4().hex,
+            pipe_output=True,
         )
 
-        self.run(
-            args=['mkdir', tmp_path],
-            user=user,
-            log_output_live=False,
-            env={},
-            tty=False,
-            ssh_key_path=ssh_key_path,
-            public_ip_address=public_ip_address,
-        )
+    def download_file(
+        self,
+        remote_path: Path,
+        local_path: Path,
+        user: str,
+        ssh_key_path: Path,
+        public_ip_address: IPv4Address,
+    ) -> None:
+        """
+        Download a file from this node.
 
-        container = _get_container_from_ip_address(public_ip_address)
-        tarstream = io.BytesIO()
-        with tarfile.TarFile(
-            fileobj=tarstream,
-            mode='w',
-            dereference=True,
-        ) as tar:
-            tar.add(name=str(local_path), arcname='/' + remote_path.name)
-        tarstream.seek(0)
-
-        container.put_archive(path=tmp_path, data=tarstream)
-        self.run(
-            args=[
-                'mv',
-                os.path.join(tmp_path, remote_path.name),
-                str(remote_path.parent),
-            ],
-            user=user,
+        Args:
+            remote_path: The path on the node to download the file from.
+            local_path: The path on the host to download the file to.
+            user: The name of the remote user to send the file.
+            ssh_key_path: The path to an SSH key which can be used to SSH to
+                the node as the ``user`` user.
+            public_ip_address: The public IP address of the node.
+        """
+        container = _container_from_ip_address(ip_address=public_ip_address)
+        args = [
+            'docker',
+            'cp',
+            container.id + ':' + str(remote_path),
+            str(local_path),
+        ]
+        run_subprocess(
+            args=args,
             log_output_live=False,
-            env={},
-            tty=False,
-            ssh_key_path=ssh_key_path,
-            public_ip_address=public_ip_address,
-        )
-
-        self.run(
-            args=['rm', '-rf', tmp_path],
-            user=user,
-            log_output_live=False,
-            env={},
-            tty=False,
-            ssh_key_path=ssh_key_path,
-            public_ip_address=public_ip_address,
+            pipe_output=True,
         )
 
 
-def _get_container_from_ip_address(ip_address: IPv4Address) -> Container:
+def _container_from_ip_address(ip_address: IPv4Address) -> Container:
     """
     Return the ``Container`` with the given ``ip_address``.
     """

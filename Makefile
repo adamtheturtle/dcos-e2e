@@ -1,20 +1,5 @@
 SHELL := /bin/bash -euxo pipefail
 
-OSS_MASTER_ARTIFACT_URL := https://downloads.dcos.io/dcos/testing/master/dcos_generate_config.sh
-OSS_1_9_ARTIFACT_URL := https://downloads.dcos.io/dcos/testing/1.9/dcos_generate_config.sh
-OSS_1_10_ARTIFACT_URL := https://downloads.dcos.io/dcos/testing/1.10/dcos_generate_config.sh
-OSS_1_11_ARTIFACT_URL := https://downloads.dcos.io/dcos/testing/1.11/dcos_generate_config.sh
-
-OSS_MASTER_ARTIFACT_PATH := /tmp/dcos_generate_config.sh
-OSS_1_9_ARTIFACT_PATH := /tmp/dcos_generate_config_1_9.sh
-OSS_1_10_ARTIFACT_PATH := /tmp/dcos_generate_config_1_10.sh
-OSS_1_11_ARTIFACT_PATH := /tmp/dcos_generate_config_1_11.sh
-
-EE_MASTER_ARTIFACT_PATH := /tmp/dcos_generate_config.ee.sh
-EE_1_9_ARTIFACT_PATH := /tmp/dcos_generate_config_1_9.ee.sh
-EE_1_10_ARTIFACT_PATH := /tmp/dcos_generate_config_1_10.ee.sh
-EE_1_11_ARTIFACT_PATH := /tmp/dcos_generate_config_1_11.ee.sh
-
 # Treat Sphinx warnings as errors
 SPHINXOPTS := -W
 
@@ -40,47 +25,35 @@ lint: \
     vulture \
     yapf
 
-# Attempt to clean leftovers by the test suite.
-.PHONY: clean
-clean:
-	# Ignore errors in case there are no containers to remove.
-	- docker stop $$(docker ps -a -q --filter="name=dcos-e2e") | :
-	- docker rm --volumes $$(docker ps -a -q --filter="name=dcos-e2e") | :
-	- docker network rm $$(docker network ls -q --filter="name=dcos-e2e") | :
-
 # Fix some linting errors.
 .PHONY: fix-lint
-fix-lint: autoflake fix-yapf
+fix-lint:
+	# Move imports to a single line so that autoflake can handle them.
+	# See https://github.com/myint/autoflake/issues/8.
+	# Then later we put them back.
+	isort --force-single-line --recursive --apply
+	$(MAKE) autoflake
 	isort --recursive --apply
+	$(MAKE) fix-yapf
 
-.PHONY: clean-artifacts
-clean-artifacts:
-	rm -rf $(OSS_MASTER_ARTIFACT_PATH)
-	rm -rf $(EE_MASTER_ARTIFACT_PATH)
+.PHONY: docs-library
+docs-library:
+	make -C docs/library clean html SPHINXOPTS=$(SPHINXOPTS)
 
-.PHONY: download-artifacts
-download-artifacts:
-	curl -o $(OSS_MASTER_ARTIFACT_PATH) $(OSS_MASTER_ARTIFACT_URL)
-	curl -o $(OSS_1_9_ARTIFACT_PATH) $(OSS_1_9_ARTIFACT_URL)
-	curl -o $(OSS_1_10_ARTIFACT_PATH) $(OSS_1_10_ARTIFACT_URL)
-	curl -o $(OSS_1_11_ARTIFACT_PATH) $(OSS_1_11_ARTIFACT_URL)
-	if [ -n "$(EE_MASTER_ARTIFACT_URL)" ]; then curl -o $(EE_MASTER_ARTIFACT_PATH) $(EE_MASTER_ARTIFACT_URL); fi
-	if [ -n "$(EE_1_9_ARTIFACT_URL)" ]; then curl -o $(EE_1_9_ARTIFACT_PATH) $(EE_1_9_ARTIFACT_URL); fi
-	if [ -n "$(EE_1_10_ARTIFACT_URL)" ]; then curl -o $(EE_1_10_ARTIFACT_PATH) $(EE_1_10_ARTIFACT_URL); fi
-	if [ -n "$(EE_1_11_ARTIFACT_URL)" ]; then curl -o $(EE_1_11_ARTIFACT_PATH) $(EE_1_11_ARTIFACT_URL); fi
+.PHONY: docs-cli
+docs-cli:
+	make -C docs/cli clean html SPHINXOPTS=$(SPHINXOPTS)
 
 .PHONY: docs
-docs:
-	make -C docs clean html SPHINXOPTS=$(SPHINXOPTS)
+docs: docs-library docs-cli
 
 .PHONY: open-docs
 open-docs:
-	xdg-open docs/build/html/index.html >/dev/null 2>&1 || \
-	open docs/build/html/index.html >/dev/null 2>&1 || \
-	echo "Requires 'xdg-open' or 'open' but neither is available."
+	python -c 'import os, webbrowser; webbrowser.open("file://" + os.path.abspath("docs/library/build/html/index.html"))'
+	python -c 'import os, webbrowser; webbrowser.open("file://" + os.path.abspath("docs/cli/build/html/index.html"))'
 
 # We pull Docker images before the tests start to catch any flakiness early.
-# See https://jira.mesosphere.com/browse/DCOS_OSS-2120 for details of
+# See https://jira.d2iq.com/browse/DCOS_OSS-2120 for details of
 # flakiness.
 .PHONY: pull-images
 pull-images:
@@ -88,9 +61,9 @@ pull-images:
 	docker pull ubuntu:xenial
 	docker pull centos:7
 	docker pull quay.io/shift/coreos:stable-1298.7.0
-	# This is used by the ``dcos-docker doctor`` command.
+	# This is used by the ``minidcos docker doctor`` command.
 	docker pull luca3m/sleep
 	# This is used for testing installation.
 	docker pull linuxbrew/linuxbrew
 	# This is required for making Linux binaries
-	docker pull python:3.6
+	docker pull python:3.7

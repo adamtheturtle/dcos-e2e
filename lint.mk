@@ -4,26 +4,11 @@ SHELL := /bin/bash -euxo pipefail
 
 .PHONY: yapf
 yapf:
-	yapf \
-	    --diff \
-	    --recursive \
-	    --exclude src/cli/_vendor \
-	    --exclude src/dcos_e2e/_vendor \
-	    --exclude src/dcos_e2e/_version.py \
-	    --exclude release/ \
-	    --exclude versioneer.py \
-	    .
+	yapf --diff --recursive .
 
 .PHONY: fix-yapf
 fix-yapf:
-	yapf \
-	    --in-place \
-	    --recursive \
-	    --exclude src/cli/_vendor \
-	    --exclude src/dcos_e2e/_vendor \
-	    --exclude src/dcos_e2e/_version.py \
-	    --exclude versioneer.py \
-	    .
+	yapf --in-place --recursive .
 
 .PHONY: mypy
 mypy:
@@ -67,11 +52,13 @@ vulture:
 
 .PHONY: linkcheck
 linkcheck:
-	$(MAKE) -C docs linkcheck SPHINXOPTS=$(SPHINXOPTS)
+	$(MAKE) -C docs/library linkcheck SPHINXOPTS=$(SPHINXOPTS)
+	$(MAKE) -C docs/cli linkcheck SPHINXOPTS=$(SPHINXOPTS)
 
 .PHONY: spelling
 spelling:
-	$(MAKE) -C docs spelling SPHINXOPTS=$(SPHINXOPTS)
+	$(MAKE) -C docs/library spelling SPHINXOPTS=$(SPHINXOPTS)
+	$(MAKE) -C docs/cli spelling SPHINXOPTS=$(SPHINXOPTS)
 
 .PHONY: custom-linters
 custom-linters:
@@ -89,5 +76,5 @@ autoflake:
 	    --remove-all-unused-imports \
 	    --remove-unused-variables \
 	    --expand-star-imports \
-	    --exclude _vendor,src/dcos_e2e/_version.py,versioneer.py,release \
+	    --exclude _vendor,src/*/_version.py,versioneer.py,release \
 	    .

@@ -5,6 +5,7 @@ Some tests are together when it would be neater otherwise as the tests take a
 long time to run.
 """
 
+import json
 import logging
 from pathlib import Path
 from subprocess import CalledProcessError
@@ -13,11 +14,10 @@ from typing import Iterator, List
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from kazoo.client import KazooClient
-from py.path import local  # pylint: disable=no-name-in-module, import-error
 
-from dcos_e2e.backends import ClusterBackend
+from dcos_e2e.base_classes import ClusterBackend
 from dcos_e2e.cluster import Cluster
+from dcos_e2e.node import DCOSVariant, Output
 
 
 class TestIntegrationTests:
@@ -28,7 +28,7 @@ class TestIntegrationTests:
     @pytest.fixture(scope='class')
     def cluster(
         self,
-        oss_artifact: Path,
+        oss_installer: Path,
         cluster_backend: ClusterBackend,
     ) -> Iterator[Cluster]:
         """
@@ -41,32 +41,13 @@ class TestIntegrationTests:
             dcos_cluster.install_dcos_from_path(
                 dcos_config=dcos_cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
-                build_artifact=oss_artifact,
-                log_output_live=True,
+                dcos_installer=oss_installer,
+                output=Output.CAPTURE,
             )
             dcos_cluster.wait_for_dcos_oss()
             yield dcos_cluster
 
-    @pytest.fixture(scope='class')
-    def zk_client(self, cluster: Cluster) -> Iterator[KazooClient]:
-        """
-        Return a ZooKeeper client connected to ``cluster``.
-        """
-        (master, ) = cluster.masters
-        zk_client_port = '2181'
-        zk_host = str(master.public_ip_address)
-        zk_client = KazooClient(hosts=zk_host + ':' + zk_client_port)
-        zk_client.start()
-        try:
-            yield zk_client
-        finally:
-            zk_client.stop()
-
-    def test_wait_for_dcos_oss(
-        self,
-        cluster: Cluster,
-        zk_client: KazooClient,
-    ) -> None:
+    def test_wait_for_dcos_oss(self, cluster: Cluster) -> None:
         """
         Exercise ``wait_for_dcos_oss`` code.
         """
@@ -74,11 +55,14 @@ class TestIntegrationTests:
         # its functionality. It is a temporary measure while we wait for
         # more thorough dcos-checks.
         cluster.wait_for_dcos_oss(http_checks=False)
-
-        cluster.wait_for_dcos_oss()
-        email = 'albert@bekstil.net'
-        path = '/dcos/users/{email}'.format(email=email)
-        assert not zk_client.exists(path=path)
+        cluster.wait_for_dcos_oss(http_checks=True)
+        # We check that no users are added by ``wait_for_dcos_oss``.
+        # If a user is added, a user cannot log in via the web UI.
+        get_users_args = ['curl', 'http://localhost:8101/acs/api/v1/users']
+        (master, ) = cluster.masters
+        result = master.run(args=get_users_args, output=Output.CAPTURE)
+        users = json.loads(result.stdout.decode())['array']
+        assert not users
 
     def test_run_pytest(self, cluster: Cluster) -> None:
         """
@@ -87,17 +71,17 @@ class TestIntegrationTests:
         """
         # No error is raised with a successful command.
         pytest_command = ['pytest', '-vvv', '-s', '-x', 'test_auth.py']
-        cluster.run_integration_tests(
-            pytest_command=pytest_command,
-            log_output_live=True,
+        cluster.run_with_test_environment(
+            args=pytest_command,
+            output=Output.CAPTURE,
         )
 
         # An error is raised with an unsuccessful command.
         with pytest.raises(CalledProcessError) as excinfo:
             pytest_command = ['pytest', 'test_no_such_file.py']
-            result = cluster.run_integration_tests(
-                pytest_command=pytest_command,
-                log_output_live=True,
+            result = cluster.run_with_test_environment(
+                args=pytest_command,
+                output=Output.CAPTURE,
             )
             # This result will not be printed if the test passes, but it
             # may provide useful debugging information.
@@ -114,7 +98,7 @@ class TestIntegrationTests:
         """
         (master, ) = cluster.masters
         command = ['/opt/mesosphere/bin/detect_ip']
-        result = cluster.run_integration_tests(pytest_command=command).stdout
+        result = cluster.run_with_test_environment(args=command).stdout
         assert str(master.public_ip_address).encode() == result.strip()
 
     def test_custom_node(self, cluster: Cluster) -> None:
@@ -123,11 +107,8 @@ class TestIntegrationTests:
         """
         (agent, ) = cluster.agents
         command = ['/opt/mesosphere/bin/detect_ip']
-        result = cluster.run_integration_tests(
-            pytest_command=command,
-            test_host=agent,
-        ).stdout
-        assert str(agent.public_ip_address).encode() == result.strip()
+        result = cluster.run_with_test_environment(args=command, node=agent)
+        assert str(agent.public_ip_address).encode() == result.stdout.strip()
 
 
 class TestClusterSize:
@@ -176,8 +157,8 @@ class TestCopyFiles:
     def test_install_cluster_from_path(
         self,
         cluster_backend: ClusterBackend,
-        oss_artifact: Path,
-        tmpdir: local,
+        oss_installer: Path,
+        tmp_path: Path,
     ) -> None:
         """
         Install a DC/OS cluster with a custom ``ip-detect`` script.
@@ -190,21 +171,21 @@ class TestCopyFiles:
         ) as cluster:
 
             (master, ) = cluster.masters
-            ip_detect_file = tmpdir.join('ip-detect')
+            ip_detect_file = tmp_path / 'ip-detect'
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
                 echo {ip_address}
                 """,
             ).format(ip_address=master.private_ip_address)
-            ip_detect_file.write(ip_detect_contents)
+            ip_detect_file.write_text(ip_detect_contents)
 
             cluster.install_dcos_from_path(
-                build_artifact=oss_artifact,
+                dcos_installer=oss_installer,
                 dcos_config=cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=[
-                    (Path(str(ip_detect_file)), Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path('/genconf/ip-detect')),
                 ],
             )
             cluster.wait_for_dcos_oss()
@@ -216,8 +197,8 @@ class TestCopyFiles:
     def test_install_cluster_from_url(
         self,
         cluster_backend: ClusterBackend,
-        oss_artifact_url: str,
-        tmpdir: local,
+        oss_installer_url: str,
+        tmp_path: Path,
     ) -> None:
         """
         Install a DC/OS cluster with a custom ``ip-detect`` script.
@@ -230,22 +211,23 @@ class TestCopyFiles:
         ) as cluster:
 
             (master, ) = cluster.masters
-            ip_detect_file = tmpdir.join('ip-detect')
+            ip_detect_file = tmp_path / 'ip-detect'
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
                 echo {ip_address}
                 """,
             ).format(ip_address=master.private_ip_address)
-            ip_detect_file.write(ip_detect_contents)
+            ip_detect_file.write_text(ip_detect_contents)
 
             cluster.install_dcos_from_url(
-                build_artifact=oss_artifact_url,
+                dcos_installer=oss_installer_url,
                 dcos_config=cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=[
-                    (Path(str(ip_detect_file)), Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path('/genconf/ip-detect')),
                 ],
+                output=Output.LOG_AND_CAPTURE,
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
@@ -254,114 +236,20 @@ class TestCopyFiles:
             assert cat_result.stdout.decode() == ip_detect_contents
 
 
-class TestInstallDcosFromPathLogging:
-    """
-    Tests for logs created when calling `install_dcos_from_path` on
-    ``Cluster``.
-    """
-
-    def _two_masters_error_logged(
-        self,
-        log_records: List[logging.LogRecord],
-    ) -> bool:
-        """
-        Return whether a particular error is logged as a DEBUG message.
-
-        This is prone to being broken as it checks for a string in the DC/OS
-        repository.
-
-        Args:
-            log_records: Messages logged from the logger.
-
-        Returns:
-            Whether a particular error is logged as a DEBUG message.
-        """
-        message = 'Must have 1, 3, 5, 7, or 9 masters'
-        debug_messages = set(
-            filter(
-                lambda record: record.levelno == logging.DEBUG,
-                log_records,
-            ),
-        )
-        matching_messages = set(
-            filter(lambda record: message in record.getMessage(), log_records),
-        )
-        return bool(len(debug_messages & matching_messages))
-
-    def test_live_logging(
-        self,
-        caplog: LogCaptureFixture,
-        cluster_backend: ClusterBackend,
-        oss_artifact: Path,
-    ) -> None:
-        """
-        If `log_output_live` is given as `True`, the installation output is
-        logged live.
-        """
-        with pytest.raises(CalledProcessError):
-            # It is not possible to install DC/OS with two master nodes.
-            with Cluster(
-                masters=2,
-                cluster_backend=cluster_backend,
-            ) as cluster:
-                cluster.install_dcos_from_path(
-                    build_artifact=oss_artifact,
-                    ip_detect_path=cluster_backend.ip_detect_path,
-                    dcos_config=cluster.base_config,
-                    log_output_live=True,
-                )
-
-        assert self._two_masters_error_logged(log_records=caplog.records)
-
-    def test_no_live_logging(
-        self,
-        caplog: LogCaptureFixture,
-        cluster_backend: ClusterBackend,
-        oss_artifact: Path,
-    ) -> None:
-        """
-        By default, subprocess output is not logged during DC/OS installation.
-        """
-        with pytest.raises(CalledProcessError):
-            # It is not possible to install DC/OS with two master nodes.
-            with Cluster(
-                masters=2,
-                cluster_backend=cluster_backend,
-            ) as cluster:
-                cluster.install_dcos_from_path(
-                    build_artifact=oss_artifact,
-                    dcos_config=cluster.base_config,
-                    ip_detect_path=cluster_backend.ip_detect_path,
-                )
-
-        assert not self._two_masters_error_logged(log_records=caplog.records)
-
-
 class TestMultipleClusters:
     """
     Tests for working with multiple clusters.
     """
 
-    def test_two_clusters(
-        self,
-        cluster_backend: ClusterBackend,
-        oss_artifact: Path,
-    ) -> None:
+    def test_two_clusters(self, cluster_backend: ClusterBackend) -> None:
         """
         It is possible to start two clusters.
         """
-        with Cluster(cluster_backend=cluster_backend) as cluster:
-            cluster.install_dcos_from_path(
-                build_artifact=oss_artifact,
-                dcos_config=cluster.base_config,
-                ip_detect_path=cluster_backend.ip_detect_path,
-            )
-            with Cluster(cluster_backend=cluster_backend) as cluster:
-                cluster.install_dcos_from_path(
-                    build_artifact=oss_artifact,
-                    dcos_config=cluster.base_config,
-                    ip_detect_path=cluster_backend.ip_detect_path,
-                )
+        # What is not tested here is that two cluster installations of DC/OS
+        # can be started at the same time.
+        with Cluster(cluster_backend=cluster_backend):
+            with Cluster(cluster_backend=cluster_backend):
+                pass
 
 
 class TestClusterFromNodes:
@@ -380,7 +268,6 @@ class TestClusterFromNodes:
             agents=1,
             public_agents=1,
         )
-
         (master, ) = cluster.masters
         (agent, ) = cluster.agents
         (public_agent, ) = cluster.public_agents
@@ -417,7 +304,7 @@ class TestClusterFromNodes:
 
     def test_install_dcos_from_url(
         self,
-        oss_artifact_url: str,
+        oss_installer_url: str,
         cluster_backend: ClusterBackend,
     ) -> None:
         """
@@ -436,7 +323,7 @@ class TestClusterFromNodes:
             )
 
             cluster.install_dcos_from_url(
-                build_artifact=oss_artifact_url,
+                dcos_installer=oss_installer_url,
                 dcos_config=original_cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
             )
@@ -445,7 +332,7 @@ class TestClusterFromNodes:
 
     def test_install_dcos_from_path(
         self,
-        oss_artifact: Path,
+        oss_installer: Path,
         cluster_backend: ClusterBackend,
     ) -> None:
         """
@@ -464,12 +351,114 @@ class TestClusterFromNodes:
             )
 
             cluster.install_dcos_from_path(
-                build_artifact=oss_artifact,
+                dcos_installer=oss_installer,
                 dcos_config=original_cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
             )
+            cluster.wait_for_dcos_oss()
+            for node in {
+                *cluster.masters,
+                *cluster.agents,
+                *cluster.public_agents,
+            }:
+                build = node.dcos_build_info()
+                assert build.version.startswith('2.')
+                assert build.commit
+                assert build.variant == DCOSVariant.OSS
+
+
+class TestUpgrade:
+    """
+    Tests for upgrading a cluster.
+    """
+
+    def test_upgrade_from_path(
+        self,
+        cluster_backend: ClusterBackend,
+        oss_2_0_installer: Path,
+        oss_2_1_installer: Path,
+    ) -> None:
+        """
+        DC/OS OSS can be upgraded from 2.0 to 2.1 from a local installer.
+        """
+        with Cluster(cluster_backend=cluster_backend) as cluster:
+            cluster.install_dcos_from_path(
+                dcos_installer=oss_2_0_installer,
+                dcos_config=cluster.base_config,
+                ip_detect_path=cluster_backend.ip_detect_path,
+                output=Output.LOG_AND_CAPTURE,
+            )
+            cluster.wait_for_dcos_oss()
+
+            for node in {
+                *cluster.masters,
+                *cluster.agents,
+                *cluster.public_agents,
+            }:
+                build = node.dcos_build_info()
+                assert build.version.startswith('2.0')
+                assert build.variant == DCOSVariant.OSS
+
+            cluster.upgrade_dcos_from_path(
+                dcos_installer=oss_2_1_installer,
+                dcos_config=cluster.base_config,
+                ip_detect_path=cluster_backend.ip_detect_path,
+                output=Output.LOG_AND_CAPTURE,
+            )
 
             cluster.wait_for_dcos_oss()
+            for node in {
+                *cluster.masters,
+                *cluster.agents,
+                *cluster.public_agents,
+            }:
+                build = node.dcos_build_info()
+                assert build.version.startswith('2.1')
+                assert build.variant == DCOSVariant.OSS
+
+    def test_upgrade_from_url(
+        self,
+        cluster_backend: ClusterBackend,
+        oss_2_0_installer: Path,
+        oss_2_1_installer_url: str,
+    ) -> None:
+        """
+        DC/OS OSS can be upgraded from 2.0 to 2.1 from a URL.
+        """
+        with Cluster(cluster_backend=cluster_backend) as cluster:
+            cluster.install_dcos_from_path(
+                dcos_installer=oss_2_0_installer,
+                dcos_config=cluster.base_config,
+                ip_detect_path=cluster_backend.ip_detect_path,
+                output=Output.LOG_AND_CAPTURE,
+            )
+            cluster.wait_for_dcos_oss()
+
+            for node in {
+                *cluster.masters,
+                *cluster.agents,
+                *cluster.public_agents,
+            }:
+                build = node.dcos_build_info()
+                assert build.version.startswith('2.0')
+                assert build.variant == DCOSVariant.OSS
+
+            cluster.upgrade_dcos_from_url(
+                dcos_installer=oss_2_1_installer_url,
+                dcos_config=cluster.base_config,
+                ip_detect_path=cluster_backend.ip_detect_path,
+                output=Output.LOG_AND_CAPTURE,
+            )
+
+            cluster.wait_for_dcos_oss()
+            for node in {
+                *cluster.masters,
+                *cluster.agents,
+                *cluster.public_agents,
+            }:
+                build = node.dcos_build_info()
+                assert build.version.startswith('2.1')
+                assert build.variant == DCOSVariant.OSS
 
 
 class TestDestroyNode:
@@ -485,3 +474,93 @@ class TestDestroyNode:
             (agent, ) = cluster.agents
             cluster.destroy_node(node=agent)
             assert not cluster.agents
+
+
+class TestInstallDCOS:
+    """
+    Tests for ``Cluster.install_dcos``.
+    """
+
+    @pytest.fixture(autouse=True)
+    def configure_logging(self, caplog: LogCaptureFixture) -> None:
+        """
+        Set the ``caplog`` logging level to ``DEBUG`` so it captures any log
+        messages produced by ``dcos_e2e`` library.
+        """
+        caplog.set_level(logging.DEBUG, logger='dcos_e2e')
+
+    def _two_masters_error_logged(
+        self,
+        log_records: List[logging.LogRecord],
+    ) -> bool:
+        """
+        Return whether a particular error is logged as a WARNING message.
+
+        This is prone to being broken as it checks for a string in the DC/OS
+        repository.
+
+        Args:
+            log_records: Messages logged from the logger.
+
+        Returns:
+            Whether a particular error is logged as a WARNING message.
+        """
+        message = 'Must have 1, 3, 5, 7, or 9 masters'
+        debug_messages = set(
+            filter(
+                lambda record: record.levelno == logging.WARNING,
+                log_records,
+            ),
+        )
+        matching_messages = set(
+            filter(lambda record: message in record.getMessage(), log_records),
+        )
+        return bool(len(debug_messages & matching_messages))
+
+    def test_live_logging(
+        self,
+        caplog: LogCaptureFixture,
+        cluster_backend: ClusterBackend,
+        oss_installer: Path,
+    ) -> None:
+        """
+        If ``output`` is given as ``Output.LOG_AND_CAPTURE``, the installation
+        output is logged live.
+        """
+        with pytest.raises(CalledProcessError):
+            # It is not possible to install DC/OS with two master nodes.
+            with Cluster(
+                masters=2,
+                cluster_backend=cluster_backend,
+            ) as cluster:
+                cluster.install_dcos_from_path(
+                    dcos_installer=oss_installer,
+                    ip_detect_path=cluster_backend.ip_detect_path,
+                    dcos_config=cluster.base_config,
+                    output=Output.LOG_AND_CAPTURE,
+                )
+
+        assert self._two_masters_error_logged(log_records=caplog.records)
+
+    def test_no_live_logging(
+        self,
+        caplog: LogCaptureFixture,
+        cluster_backend: ClusterBackend,
+        oss_installer: Path,
+    ) -> None:
+        """
+        By default, subprocess output is not logged during DC/OS installation.
+        """
+        with pytest.raises(CalledProcessError):
+            # It is not possible to install DC/OS with two master nodes.
+            with Cluster(
+                masters=2,
+                cluster_backend=cluster_backend,
+            ) as cluster:
+                cluster.install_dcos_from_path(
+                    dcos_installer=oss_installer,
+                    dcos_config=cluster.base_config,
+                    ip_detect_path=cluster_backend.ip_detect_path,
+                )
+
+        assert not self._two_masters_error_logged(log_records=caplog.records)

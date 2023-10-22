@@ -35,6 +35,7 @@ def _docker_service_file(
         DockerVersion.v1_11_2: '/usr/bin/docker daemon',
         DockerVersion.v1_13_1: '/usr/bin/docker daemon',
         DockerVersion.v17_12_1_ce: '/usr/bin/dockerd',
+        DockerVersion.v18_06_3_ce: '/usr/bin/dockerd',
     }[docker_version]
 
     docker_cmd = (
@@ -95,7 +96,7 @@ def start_dcos_container(
     In this container, start Docker and `sshd`.
 
     Run Mesos without `systemd` support. This is not supported by DC/OS.
-    See https://jira.mesosphere.com/browse/DCOS_OSS-1131.
+    See https://jira.d2iq.com/browse/DCOS_OSS-1131.
 
     Args:
         container_base_name: The start of the container name.
@@ -177,16 +178,21 @@ def start_dcos_container(
         ['mkdir', '-p', '/var/lib/dcos'],
         ['/bin/bash', '-c', docker_env_setup],
         ['mkdir', '-p', '/lib/systemd/system'],
-        '/bin/bash -c "{cmd}"'.format(cmd=' '.join(echo_docker)),
+        ['/bin/bash', '-c', '{cmd}'.format(cmd=' '.join(echo_docker))],
+        [  # Retry in case D-Bus is not ready yet
+            'timeout', '120', '/bin/bash', '-c',
+            'until systemctl daemon-reload; do sleep 1; done',
+        ],
         ['systemctl', 'enable', docker_service_name],
         ['systemctl', 'start', docker_service_name],
         ['/bin/bash', '-c', disable_systemd_support_cmd],
         ['/bin/bash', '-c', setup_mesos_cgroup_root],
         ['mkdir', '--parents', '/root/.ssh'],
-        '/bin/bash -c "{cmd}"'.format(cmd=' '.join(echo_key)),
+        ['/bin/bash', '-c', '{cmd}'.format(cmd=' '.join(echo_key))],
         ['rm', '-f', '/run/nologin', '||', 'true'],
         ['systemctl', 'start', 'sshd'],
-        # Work around https://jira.mesosphere.com/browse/DCOS_OSS-1361.
+        # Work around https://jira.d2iq.com/browse/DCOS_OSS-1361.
+        ['systemd-tmpfiles', '--create', '--prefix', '/var/log/journal'],
         ['systemd-tmpfiles', '--create', '--prefix', '/run/log/journal'],
     ]:
         exit_code, output = container.exec_run(cmd=cmd)

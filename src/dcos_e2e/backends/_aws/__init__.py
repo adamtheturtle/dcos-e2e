@@ -2,23 +2,22 @@
 Helpers for creating and interacting with clusters on AWS.
 """
 
-import inspect
-import os
+import stat
 import uuid
 from ipaddress import IPv4Address
 from pathlib import Path
 from shutil import rmtree
 from tempfile import gettempdir
-from typing import Optional  # noqa: F401
-from typing import Any, Dict, Iterable, Set, Tuple, Type
+from typing import Any, Dict, Iterable, Optional, Set, Tuple, Type
 
 import boto3
 
 from dcos_e2e._vendor.dcos_launch import config, get_launcher
 from dcos_e2e._vendor.dcos_launch.util import AbstractLauncher  # noqa: F401
-from dcos_e2e.backends._base_classes import ClusterBackend, ClusterManager
+from dcos_e2e.base_classes import ClusterBackend, ClusterManager
+from dcos_e2e.cluster import Cluster
 from dcos_e2e.distributions import Distribution
-from dcos_e2e.node import Node
+from dcos_e2e.node import Node, Output
 
 
 class AWS(ClusterBackend):
@@ -109,9 +108,8 @@ class AWS(ClusterBackend):
             [
                 Distribution.CENTOS_7,
                 Distribution.RHEL_7,
-                Distribution.COREOS,
                 # Support for Ubuntu is blocked on
-                # https://jira.mesosphere.com/browse/DCOS_OSS-3876.
+                # https://jira.d2iq.com/browse/DCOS_OSS-3876.
             ],
         )
 
@@ -149,9 +147,22 @@ class AWS(ClusterBackend):
         """
         Return the path to the AWS specific ``ip-detect`` script.
         """
-        current_file = inspect.stack()[0][1]
-        current_parent = Path(os.path.abspath(current_file)).parent
+        current_parent = Path(__file__).parent.resolve()
         return current_parent / 'resources' / 'ip-detect'
+
+    @property
+    def base_config(self) -> Dict[str, Any]:
+        """
+        Return a base configuration for installing DC/OS OSS.
+        """
+        return {
+            'cluster_name': 'DCOS',
+            'exhibitor_storage_backend': 'static',
+            'master_discovery': 'static',
+            'platform': 'aws',
+            'resolvers': ['10.10.0.2', '8.8.8.8'],
+            'rexray_config_preset': 'aws',
+        }
 
 
 class AWSCluster(ClusterManager):
@@ -187,16 +198,13 @@ class AWSCluster(ClusterManager):
 
         ssh_user = {
             Distribution.CENTOS_7: 'centos',
-            Distribution.COREOS: 'core',
             Distribution.RHEL_7: 'ec2-user',
         }
 
         install_prereqs = {
-            Distribution.COREOS:
-            True,
             # There is a bug hit when using ``install_prereqs`` with some
             # distributions.
-            # See https://jira.mesosphere.com/browse/DCOS-40894.
+            # See https://jira.d2iq.com/browse/DCOS-40894.
             Distribution.CENTOS_7:
             False,
             Distribution.RHEL_7:
@@ -205,18 +213,15 @@ class AWSCluster(ClusterManager):
 
         prereqs_script_filename = {
             Distribution.CENTOS_7: 'install_prereqs.sh',
-            Distribution.COREOS: 'run_coreos_prereqs.sh',
             Distribution.RHEL_7: 'install_prereqs.sh',
         }[cluster_backend.linux_distribution]
         self._default_user = ssh_user[cluster_backend.linux_distribution]
 
         self.cluster_backend = cluster_backend
         self.dcos_launcher = None  # type: Optional[AbstractLauncher]
-        self.cluster_info = {}  # type: Dict[str, Any]
 
         aws_distros = {
             Distribution.CENTOS_7: 'cent-os-7-dcos-prereqs',
-            Distribution.COREOS: 'coreos',
             Distribution.RHEL_7: 'rhel-7-dcos-prereqs',
         }
 
@@ -251,12 +256,7 @@ class AWSCluster(ClusterManager):
 
         # First we create a preliminary dcos-config inside the
         # dcos-launch config to pass the config validation step.
-        launch_config['dcos_config'] = {
-            'cluster_name': unique,
-            'resolvers': ['10.10.0.2', '8.8.8.8'],
-            'master_discovery': 'static',
-            'exhibitor_storage_backend': 'static',
-        }
+        launch_config['dcos_config'] = self.cluster_backend.base_config
 
         # Validate the preliminary dcos-launch config.
         # This also fills in blanks in the dcos-launch config.
@@ -271,13 +271,14 @@ class AWSCluster(ClusterManager):
         )
 
         # Create the AWS stack from the DcosCloudformationLauncher.
-        # Update ``cluster_info`` with the AWS SSH key information.
-        self.cluster_info = self.launcher.create()
+        # Get the AWS SSH key information from this.
+        cluster_create_info = self.launcher.create()
+        private_key = cluster_create_info['ssh_private_key']
 
         # Store the generated AWS SSH key to the file system.
         self._ssh_key_path = self._path / 'id_rsa'
-        private_key = self.cluster_info['ssh_private_key']
         self._ssh_key_path.write_bytes(private_key.encode())
+        self._ssh_key_path.chmod(mode=stat.S_IRUSR)
 
         # Wait for the AWS stack setup completion.
         self.launcher.wait()
@@ -327,84 +328,86 @@ class AWSCluster(ClusterManager):
 
             ec2.create_tags(Resources=instance_ids, Tags=ec2_tags)
 
-    @property
-    def base_config(self) -> Dict[str, Any]:
-        """
-        Return a base configuration for installing DC/OS OSS.
-        """
-        conf = self.launcher.config['dcos_config']  # type: Dict[str, Any]
-        return conf
-
-    def install_dcos_from_url_with_bootstrap_node(
+    def install_dcos_from_url(
         self,
-        build_artifact: str,
+        dcos_installer: str,
         dcos_config: Dict[str, Any],
         ip_detect_path: Path,
-        log_output_live: bool,
+        output: Output,
         files_to_copy_to_genconf_dir: Iterable[Tuple[Path, Path]],
     ) -> None:
         """
         Install DC/OS from a URL.
 
         Args:
-            build_artifact: The URL string to a build artifact to install DC/OS
+            dcos_installer: The URL string to an installer to install DC/OS
                 from.
             dcos_config: The DC/OS configuration to use.
             ip_detect_path: The path to an ``ip-detect`` script to be used
                 during the DC/OS installation.
-            log_output_live: If ``True``, log output of the installation live.
+            output: What happens with stdout and stderr.
             files_to_copy_to_genconf_dir: Pairs of host paths to paths on
                 the installer node. These are files to copy from the host to
                 the installer node before installing DC/OS.
-
-        Raises:
-            NotImplementedError: ``NotImplementedError`` because this function
-                backend by ``dcos-launch`` does not support a custom
-                ``ip-detect`` script or any other files supplied to the
-                installer by copying them to the ``/genconf`` directory.
         """
-        if ip_detect_path != self._ip_detect_path:
-            raise NotImplementedError
+        new_ip_detect_given = bool(ip_detect_path != self._ip_detect_path)
+        if new_ip_detect_given or files_to_copy_to_genconf_dir:
+            cluster = Cluster.from_nodes(
+                masters=self.masters,
+                agents=self.agents,
+                public_agents=self.public_agents,
+            )
 
-        if files_to_copy_to_genconf_dir:
-            raise NotImplementedError
+            cluster.install_dcos_from_url(
+                dcos_installer=dcos_installer,
+                dcos_config=dcos_config,
+                ip_detect_path=ip_detect_path,
+                output=output,
+                files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
+            )
+            return
 
         # In order to install DC/OS with the preliminary dcos-launch
-        # config the ``build_artifact`` URL is overwritten.
-        self.launcher.config['installer_url'] = build_artifact
+        # config the ``dcos_installer`` URL is overwritten.
+        self.launcher.config['installer_url'] = dcos_installer
         self.launcher.config['dcos_config'] = dcos_config
         self.launcher.install_dcos()
 
-    def install_dcos_from_path_with_bootstrap_node(
+    def install_dcos_from_path(
         self,
-        build_artifact: Path,
+        dcos_installer: Path,
         dcos_config: Dict[str, Any],
         ip_detect_path: Path,
-        log_output_live: bool,
+        output: Output,
         files_to_copy_to_genconf_dir: Iterable[Tuple[Path, Path]] = (),
     ) -> None:
         """
-        Install DC/OS from a given build artifact with a bootstrap node.
-        This is not supported and simply raises a his is not supported and
-        simply raises a ``NotImplementedError``.
+        Install DC/OS from a given installer with a bootstrap node.
 
         Args:
-            build_artifact: The ``Path`` to a build artifact to install DC/OS
+            dcos_installer: The ``Path`` to an installer to install DC/OS
                 from.
             dcos_config: The DC/OS configuration to use.
             ip_detect_path: The path to an ``ip-detect`` script to be used
                 during the DC/OS installation.
-            log_output_live: If ``True``, log output of the installation live.
+            output: What happens with stdout and stderr.
             files_to_copy_to_genconf_dir: Pairs of host paths to paths on the
                 installer node. This must be empty as it is not currently
                 supported.
-
-        Raises:
-            NotImplementedError: ``NotImplementedError`` because the AWS
-                backend does not support the DC/OS advanced installation
-                method.
         """
-        raise NotImplementedError
+        cluster = Cluster.from_nodes(
+            masters=self.masters,
+            agents=self.agents,
+            public_agents=self.public_agents,
+        )
+
+        cluster.install_dcos_from_path(
+            dcos_installer=dcos_installer,
+            dcos_config=dcos_config,
+            ip_detect_path=ip_detect_path,
+            files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
+            output=output,
+        )
 
     def destroy_node(self, node: Node) -> None:
         """
@@ -422,7 +425,7 @@ class AWSCluster(ClusterManager):
         # Deletion only works if valid AWS credentials are present. This
         # a problem if temporary credentials become invalid before
         # destroying a cluster because the generated AWS KeyPair persists.
-        # https://jira.mesosphere.com/browse/DCOS-21893
+        # https://jira.d2iq.com/browse/DCOS-21893
         self.launcher.delete()
 
         rmtree(path=str(self._path), ignore_errors=True)

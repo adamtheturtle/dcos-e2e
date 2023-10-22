@@ -2,6 +2,7 @@
 Tests for the AWS backend.
 """
 
+import stat
 import uuid
 from pathlib import Path
 from textwrap import dedent
@@ -14,14 +15,11 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from passlib.hash import sha512_crypt
-# See https://github.com/PyCQA/pylint/issues/1536 for details on why the errors
-# are disabled.
-from py.path import local  # pylint: disable=no-name-in-module, import-error
 
 from dcos_e2e.backends import AWS
 from dcos_e2e.cluster import Cluster
 from dcos_e2e.distributions import Distribution
-from dcos_e2e.node import Node, Role
+from dcos_e2e.node import Node, Output, Role
 
 
 class TestDefaults:
@@ -61,7 +59,7 @@ class TestUnsupported:
 
     def test_linux_distribution_ubuntu(self) -> None:
         """
-        The AWS backend does not support the COREOS Linux distribution.
+        The AWS backend does not support the Ubuntu Linux distribution.
         """
         with pytest.raises(NotImplementedError) as excinfo:
             AWS(linux_distribution=Distribution.UBUNTU_16_04)
@@ -91,7 +89,7 @@ class TestRunIntegrationTest:
     @pytest.mark.parametrize('linux_distribution', [Distribution.CENTOS_7])
     def test_run_enterprise_integration_test(
         self,
-        ee_artifact_url: str,
+        ee_installer_url: str,
         license_key_contents: str,
         linux_distribution: Distribution,
     ) -> None:
@@ -117,12 +115,12 @@ class TestRunIntegrationTest:
         ) as cluster:
 
             cluster.install_dcos_from_url(
-                build_artifact=ee_artifact_url,
+                dcos_installer=ee_installer_url,
                 dcos_config={
                     **cluster.base_config,
                     **config,
                 },
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
             )
 
@@ -132,13 +130,15 @@ class TestRunIntegrationTest:
             )
 
             # No error is raised with a successful command.
-            cluster.run_integration_tests(
-                pytest_command=['pytest', '-vvv', '-s', '-x', 'test_tls.py'],
+            # We choose a test file which runs very quickly.
+            fast_test_file = 'test_marathon_authn_authz.py'
+            cluster.run_with_test_environment(
+                args=['pytest', '-vvv', '-s', '-x', fast_test_file],
                 env={
                     'DCOS_LOGIN_UNAME': superuser_username,
                     'DCOS_LOGIN_PW': superuser_password,
                 },
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
             )
 
 
@@ -170,19 +170,21 @@ def _write_key_pair(public_key_path: Path, private_key_path: Path) -> None:
     public_key_path.write_bytes(data=public_key)
     private_key_path.write_bytes(data=private_key)
 
+    private_key_path.chmod(mode=stat.S_IRUSR)
+
 
 class TestCustomKeyPair:
     """
     Tests for passing a custom key pair to the AWS backend.
     """
 
-    def test_custom_key_pair(self, tmpdir: local) -> None:
+    def test_custom_key_pair(self, tmp_path: Path) -> None:
         """
         It is possible to pass a custom key pair to the AWS backend.
         """
         key_name = 'e2e-test-{random}'.format(random=uuid.uuid4().hex)
-        private_key_path = Path(str(tmpdir.join('private_key')))
-        public_key_path = Path(str(tmpdir.join('public_key')))
+        private_key_path = tmp_path / 'private_key'
+        public_key_path = tmp_path / 'public_key'
         _write_key_pair(
             public_key_path=public_key_path,
             private_key_path=private_key_path,
@@ -219,23 +221,23 @@ class TestDCOSInstallation:
     Test installing DC/OS.
     """
 
-    def test_install_dcos_from_path(self, oss_artifact: Path) -> None:
+    def test_install_dcos_from_path(self, oss_installer: Path) -> None:
         """
         It is possible to install DC/OS on an AWS cluster from a local path.
         """
         cluster_backend = AWS()
         with Cluster(cluster_backend=cluster_backend) as cluster:
             cluster.install_dcos_from_path(
-                build_artifact=oss_artifact,
+                dcos_installer=oss_installer,
                 dcos_config=cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
             )
             cluster.wait_for_dcos_oss()
 
     def test_install_dcos_from_node(
         self,
-        oss_artifact_url: str,
+        oss_installer_url: str,
     ) -> None:
         """
         It is possible to install DC/OS on an AWS cluster node by node.
@@ -248,18 +250,18 @@ class TestDCOSInstallation:
         ) as cluster:
             (master, ) = cluster.masters
             master.install_dcos_from_url(
-                build_artifact=oss_artifact_url,
+                dcos_installer=oss_installer_url,
                 dcos_config=cluster.base_config,
                 role=Role.MASTER,
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
             )
             cluster.wait_for_dcos_oss()
 
     def test_install_dcos_with_custom_ip_detect(
         self,
-        oss_artifact_url: str,
-        tmpdir: local,
+        oss_installer_url: str,
+        tmp_path: Path,
     ) -> None:
         """
         It is possible to install DC/OS on an AWS with a custom IP detect
@@ -272,20 +274,20 @@ class TestDCOSInstallation:
             public_agents=0,
         ) as cluster:
             (master, ) = cluster.masters
-            ip_detect_file = tmpdir.join('ip-detect')
+            ip_detect_file = tmp_path / 'ip-detect'
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
                 echo {ip_address}
                 """,
             ).format(ip_address=master.private_ip_address)
-            ip_detect_file.write(ip_detect_contents)
+            ip_detect_file.write_text(ip_detect_contents)
 
             cluster.install_dcos_from_url(
-                build_artifact=oss_artifact_url,
+                dcos_installer=oss_installer_url,
                 dcos_config=cluster.base_config,
-                log_output_live=True,
-                ip_detect_path=Path(str(ip_detect_file)),
+                output=Output.LOG_AND_CAPTURE,
+                ip_detect_path=ip_detect_file,
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
@@ -299,8 +301,8 @@ class TestDCOSInstallation:
 
     def test_install_dcos_with_custom_genconf(
         self,
-        oss_artifact_url: str,
-        tmpdir: local,
+        oss_installer_url: str,
+        tmp_path: Path,
     ) -> None:
         """
         It is possible to install DC/OS on an AWS including
@@ -313,22 +315,22 @@ class TestDCOSInstallation:
             public_agents=0,
         ) as cluster:
             (master, ) = cluster.masters
-            ip_detect_file = tmpdir.join('ip-detect')
+            ip_detect_file = tmp_path / 'ip-detect'
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
                 echo {ip_address}
                 """,
             ).format(ip_address=master.private_ip_address)
-            ip_detect_file.write(ip_detect_contents)
+            ip_detect_file.write_text(ip_detect_contents)
 
             cluster.install_dcos_from_url(
-                build_artifact=oss_artifact_url,
+                dcos_installer=oss_installer_url,
                 dcos_config=cluster.base_config,
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=[
-                    (Path(str(ip_detect_file)), Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path('/genconf/ip-detect')),
                 ],
             )
             cluster.wait_for_dcos_oss()

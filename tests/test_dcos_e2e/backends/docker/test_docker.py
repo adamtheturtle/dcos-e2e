@@ -10,13 +10,10 @@ import uuid
 from pathlib import Path
 from typing import Iterator
 
-# See https://github.com/PyCQA/pylint/issues/1536 for details on why the errors
-# are disabled.
 import docker
 import pytest
 from docker.models.networks import Network
 from docker.types import Mount
-from py.path import local  # pylint: disable=no-name-in-module, import-error
 from requests_mock import Mocker, NoMockAddress
 from retry import retry
 
@@ -24,7 +21,7 @@ from dcos_e2e.backends import Docker
 from dcos_e2e.cluster import Cluster
 from dcos_e2e.docker_storage_drivers import DockerStorageDriver
 from dcos_e2e.docker_versions import DockerVersion
-from dcos_e2e.node import Node, Transport
+from dcos_e2e.node import Node, Output, Transport
 
 
 @retry(
@@ -62,18 +59,18 @@ class TestDockerBackend:
     Tests for functionality specific to the Docker backend.
     """
 
-    def test_custom_mounts(self, tmpdir: local) -> None:
+    def test_custom_mounts(self, tmp_path: Path) -> None:
         """
         It is possible to mount local files to master nodes.
         """
-        local_all_file = tmpdir.join('all_file.txt')
-        local_all_file.write('')
-        local_master_file = tmpdir.join('master_file.txt')
-        local_master_file.write('')
-        local_agent_file = tmpdir.join('agent_file.txt')
-        local_agent_file.write('')
-        local_public_agent_file = tmpdir.join('public_agent_file.txt')
-        local_public_agent_file.write('')
+        local_all_file = tmp_path / 'all_file.txt'
+        local_all_file.write_text('')
+        local_master_file = tmp_path / 'master_file.txt'
+        local_master_file.write_text('')
+        local_agent_file = tmp_path / 'agent_file.txt'
+        local_agent_file.write_text('')
+        local_public_agent_file = tmp_path / 'public_agent_file.txt'
+        local_public_agent_file.write_text('')
 
         master_path = Path('/etc/on_master_nodes.txt')
         agent_path = Path('/etc/on_agent_nodes.txt')
@@ -131,23 +128,22 @@ class TestDockerBackend:
             ]:
                 for node in nodes:
                     content = str(uuid.uuid4())
-                    local_file.write(content)
+                    local_file.write_text(content)
                     args = ['cat', str(path)]
                     result = node.run(args=args)
                     assert result.stdout.decode() == content
 
-    def test_install_dcos_from_url(self, oss_artifact_url: str) -> None:
+    def test_install_dcos_from_url(self, oss_installer_url: str) -> None:
         """
         It is possible to install DC/OS on a cluster with a Docker backend.
         """
-        # We use a specific version of Docker on the nodes because else we may
-        # hit https://github.com/opencontainers/runc/issues/1175.
-        cluster_backend = Docker(docker_version=DockerVersion.v17_12_1_ce)
+        cluster_backend = Docker()
         with Cluster(cluster_backend=cluster_backend) as cluster:
             cluster.install_dcos_from_url(
-                build_artifact=oss_artifact_url,
+                dcos_installer=oss_installer_url,
                 dcos_config=cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
+                output=Output.LOG_AND_CAPTURE,
             )
             cluster.wait_for_dcos_oss()
 
@@ -171,13 +167,14 @@ class TestDockerVersion:
             '1.11.2': DockerVersion.v1_11_2,
             '1.13.1': DockerVersion.v1_13_1,
             '17.12.1-ce': DockerVersion.v17_12_1_ce,
+            '18.06.3-ce': DockerVersion.v18_06_3_ce,
         }
 
         return docker_versions[result.stdout.decode().strip()]
 
     def test_default(self) -> None:
         """
-        By default, the Docker version is 1.13.1.
+        By default, the Docker version is 18.06.3.
         """
         with Cluster(
             cluster_backend=Docker(),
@@ -188,7 +185,7 @@ class TestDockerVersion:
             (master, ) = cluster.masters
             docker_version = self._get_docker_version(node=master)
 
-        assert docker_version == DockerVersion.v1_13_1
+        assert docker_version == DockerVersion.v18_06_3_ce
 
     @pytest.mark.parametrize('docker_version', list(DockerVersion))
     def test_custom_version(self, docker_version: DockerVersion) -> None:
@@ -385,11 +382,12 @@ class TestNetworks:
     On macOS, by default, it is not possible to SSH to containers without
     forwarded ports.
 
-    We therefore recommend that people use ``dcos-docker setup-mac-network``.
-    This makes it possible to SSH to containers in the default network range.
+    We therefore recommend that people use ``minidcos docker
+    setup-mac-network``.  This makes it possible to SSH to containers in the
+    default network range.
 
     However, in these tests, we use custom networks.
-    Using the VPN created by ``dcos-docker setup-mac-network`` it is not
+    Using the VPN created by ``minidcos docker setup-mac-network`` it is not
     possible to SSH to containers on custom networks.
     See https://github.com/wojas/docker-mac-network#openvpn for details.
 
@@ -408,10 +406,13 @@ class TestNetworks:
             iprange='172.28.0.0/24',
             gateway='172.28.0.254',
         )
+        # We use the default container prefix so that the
+        # ``minidcos docker clean`` command cleans this up.
+        prefix = Docker().container_name_prefix
+        random = uuid.uuid4()
+        name = '{prefix}-network-{random}'.format(prefix=prefix, random=random)
         network = client.networks.create(
-            # The container name prefix "dcos-e2e-" matches the prefix used in
-            # the "clean" Makefile target.
-            name='dcos-e2e-network-{random}'.format(random=uuid.uuid4()),
+            name=name,
             driver='bridge',
             ipam=docker.types.IPAMConfig(pool_configs=[ipam_pool]),
             attachable=False,
@@ -451,7 +452,7 @@ class TestNetworks:
     def test_docker_exec_transport(
         self,
         docker_network: Network,
-        tmpdir: local,
+        tmp_path: Path,
     ) -> None:
         """
         ``Node`` operations with the Docker exec transport work even if the
@@ -467,13 +468,13 @@ class TestNetworks:
         ) as cluster:
             (master, ) = cluster.masters
             content = str(uuid.uuid4())
-            local_file = tmpdir.join('example_file.txt')
-            local_file.write(content)
+            local_file = tmp_path / 'example_file.txt'
+            local_file.write_text(content)
             random = uuid.uuid4().hex
             master_destination_dir = '/etc/{random}'.format(random=random)
             master_destination_path = Path(master_destination_dir) / 'file.txt'
             master.send_file(
-                local_path=Path(str(local_file)),
+                local_path=local_file,
                 remote_path=master_destination_path,
                 transport=Transport.DOCKER_EXEC,
             )

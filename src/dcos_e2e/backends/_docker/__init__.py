@@ -2,9 +2,9 @@
 Helpers for creating and interacting with clusters on Docker.
 """
 
-import inspect
-import os
+import logging
 import socket
+import stat
 import subprocess
 import uuid
 from ipaddress import IPv4Address
@@ -20,17 +20,18 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from docker.types import Mount
 
-from dcos_e2e._common import get_logger, run_subprocess
-from dcos_e2e.backends._base_classes import ClusterBackend, ClusterManager
+from dcos_e2e._subprocess_tools import run_subprocess
+from dcos_e2e.base_classes import ClusterBackend, ClusterManager
+from dcos_e2e.cluster import Cluster
 from dcos_e2e.distributions import Distribution
 from dcos_e2e.docker_storage_drivers import DockerStorageDriver
 from dcos_e2e.docker_versions import DockerVersion
-from dcos_e2e.node import Node, Transport
+from dcos_e2e.node import Node, Output, Transport
 
 from ._containers import start_dcos_container
 from ._docker_build import build_docker_image
 
-LOGGER = get_logger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def _write_key_pair(public_key_path: Path, private_key_path: Path) -> None:
@@ -61,6 +62,8 @@ def _write_key_pair(public_key_path: Path, private_key_path: Path) -> None:
     public_key_path.write_bytes(data=public_key)
     private_key_path.write_bytes(data=private_key)
 
+    private_key_path.chmod(mode=stat.S_IRUSR)
+
 
 def _get_open_port() -> int:
     """
@@ -83,7 +86,15 @@ def _get_fallback_storage_driver() -> DockerStorageDriver:
         'overlay2': DockerStorageDriver.OVERLAY_2,
     }
 
-    client = docker.from_env(version='auto')
+    try:
+        client = docker.from_env(version='auto')
+    except docker.errors.DockerException:  # pragma: no cover
+        # If Docker is not available it does not matter what backend we choose.
+        #
+        # We choose one so that the documentation can build in environments
+        # such as Read The Docs which do not have Docker installed.
+        return DockerStorageDriver.AUFS
+
     host_driver = client.info()['Driver']
 
     try:
@@ -92,7 +103,7 @@ def _get_fallback_storage_driver() -> DockerStorageDriver:
         # This chooses the aufs driver if the host's driver is not
         # supported because this is widely supported.
         #
-        # This is encoded in a `dcos-docker doctor` check.
+        # This is encoded in a `minidcos docker doctor` check.
         return DockerStorageDriver.AUFS
 
 
@@ -103,13 +114,14 @@ class Docker(ClusterBackend):
 
     def __init__(
         self,
+        container_name_prefix: str = 'dcos-e2e',
         workspace_dir: Optional[Path] = None,
         custom_container_mounts: Optional[List[Mount]] = None,
         custom_master_mounts: Optional[List[Mount]] = None,
         custom_agent_mounts: Optional[List[Mount]] = None,
         custom_public_agent_mounts: Optional[List[Mount]] = None,
         linux_distribution: Distribution = Distribution.CENTOS_7,
-        docker_version: DockerVersion = DockerVersion.v1_13_1,
+        docker_version: DockerVersion = DockerVersion.v18_06_3_ce,
         storage_driver: Optional[DockerStorageDriver] = None,
         docker_container_labels: Optional[Dict[str, str]] = None,
         docker_master_labels: Optional[Dict[str, str]] = None,
@@ -118,15 +130,19 @@ class Docker(ClusterBackend):
         transport: Transport = Transport.DOCKER_EXEC,
         network: Optional[docker.models.networks.Network] = None,
         one_master_host_port_map: Optional[Dict[str, int]] = None,
+        mount_sys_fs_cgroup: bool = True,
     ) -> None:
         """
         Create a configuration for a Docker cluster backend.
 
         Args:
+            container_name_prefix: The prefix that all container names will
+                start with. This is useful, for example, for later finding all
+                containers started with this backend.
             workspace_dir: The directory in which large temporary files will be
-                created. These files will be deleted at the end of a test run.
-                This is equivalent to `dir` in
-                :py:func:`tempfile.mkstemp`.
+                created. These files will be deleted when the cluster is
+                destroyed.
+                This is equivalent to `dir` in :py:func:`tempfile.mkstemp`.
             custom_container_mounts: Custom mounts add to all node containers.
                 See `mounts` in `Containers.run`_.
             custom_master_mounts: Custom mounts add to master node containers.
@@ -164,8 +180,12 @@ class Docker(ClusterBackend):
                 master only if there are multiple master nodes. See `ports` in
                 `Containers.run`_. Currently, only Transmission Control
                 Protocol is supported.
+            mount_sys_fs_cgroup: Whether to mount ``/sys/fs/cgroup`` from the
+                host. This is required to run applications which require
+                cgroup isolation.
 
         Attributes:
+            default_user: A user which can be used to SSH into nodes.
             workspace_dir: The directory in which large temporary files will be
                 created. These files will be deleted at the end of a test run.
             custom_container_mounts: Custom mounts add to all node containers.
@@ -203,10 +223,16 @@ class Docker(ClusterBackend):
                 master only if there are multiple master nodes. See `ports` in
                 `Containers.run`_. Currently, only Transmission Control
                 Protocol is supported.
+            container_name_prefix: The prefix that all container names will
+                start with. This is useful, for example, for later finding all
+                containers started with this backend.
+            cgroup_mounts: Mounts to use for cgroups.
 
         .. _Containers.run:
             http://docker-py.readthedocs.io/en/stable/containers.html#docker.models.containers.ContainerCollection.run
         """
+        self.default_user = 'root'
+        self.bootstrap_tmp_path = Path('/opt/dcos_install_tmp')
         self.docker_version = docker_version
         self.workspace_dir = workspace_dir or Path(gettempdir())
         self.custom_container_mounts = custom_container_mounts or []
@@ -223,11 +249,29 @@ class Docker(ClusterBackend):
         self.transport = transport
         self.network = network
         self.one_master_host_port_map = one_master_host_port_map or {}
+        self.container_name_prefix = container_name_prefix
+
+        # Deploying some applications, such as Kafka, read from the cgroups
+        # isolator to know their CPU quota.
+        # This is determined only by error messages when we attempt to deploy
+        # Kafka on a cluster without this mount.
+        # Therefore, we mount ``/sys/fs/cgroup`` from the host.
+        #
+        # This has a problem - some hosts do not have systemd, and therefore
+        # ``/sys/fs/cgroup`` is not available, and a mount error is shown.
+        # See https://jira.d2iq.com/browse/DCOS_OSS-4475 for details.
+        cgroup_mount = Mount(
+            source='/sys/fs/cgroup',
+            target='/sys/fs/cgroup',
+            read_only=True,
+            type='bind',
+        )
+        self.cgroup_mounts = [cgroup_mount] if mount_sys_fs_cgroup else []
 
     @property
     def cluster_cls(self) -> Type['DockerCluster']:
         """
-        Return the `ClusterManager` class to use to create and manage a
+        Return the ``ClusterManager`` class to use to create and manage a
         cluster.
         """
         return DockerCluster
@@ -237,9 +281,33 @@ class Docker(ClusterBackend):
         """
         Return the path to the Docker specific ``ip-detect`` script.
         """
-        current_file = inspect.stack()[0][1]
-        current_parent = Path(os.path.abspath(current_file)).parent
+        current_parent = Path(__file__).parent.resolve()
         return current_parent / 'resources' / 'ip-detect'
+
+    @property
+    def base_config(self) -> Dict[str, Any]:
+        """
+        Return a base configuration for installing DC/OS OSS, not including the
+        list of nodes.
+        """
+        ssh_user = self.default_user
+        return {
+            'bootstrap_url': 'file://' + str(self.bootstrap_tmp_path),
+            # Without this, we see errors like:
+            # "Time is not synchronized / marked as bad by the kernel.".
+            # Adam saw this on Docker for Mac 17.09.0-ce-mac35.
+            #
+            # In that case this was fixable with:
+            #   $ docker run --rm --privileged alpine hwclock -s
+            'check_time': 'false',
+            'cluster_name': 'DCOS',
+            'exhibitor_storage_backend': 'static',
+            'master_discovery': 'static',
+            'process_timeout': 10000,
+            'resolvers': ['8.8.8.8'],
+            'ssh_port': 22,
+            'ssh_user': ssh_user,
+        }
 
 
 class DockerCluster(ClusterManager):
@@ -263,16 +331,18 @@ class DockerCluster(ClusterManager):
             public_agents: The number of public agent nodes to create.
             cluster_backend: Details of the specific Docker backend to use.
         """
-        self._default_user = 'root'
+        self._default_user = cluster_backend.default_user
         self._default_transport = cluster_backend.transport
+        self._bootstrap_tmp_path = cluster_backend.bootstrap_tmp_path
 
         # To avoid conflicts, we use random container names.
         # We use the same random string for each container in a cluster so
         # that they can be associated easily.
         #
-        # Starting with "dcos-e2e" allows `make clean` to remove these and
-        # only these containers.
-        self._cluster_id = 'dcos-e2e-{random}'.format(random=uuid.uuid4())
+        self._cluster_id = '{prefix}-{random}'.format(
+            prefix=cluster_backend.container_name_prefix,
+            random=str(uuid.uuid4())[:5],
+        )
 
         # We work in a new directory.
         # This helps running tests in parallel without conflicts and it
@@ -310,7 +380,6 @@ class DockerCluster(ClusterManager):
 
         bootstrap_genconf_path = self._genconf_dir / 'serve'
         bootstrap_genconf_path.mkdir()
-        self._bootstrap_tmp_path = Path('/opt/dcos_install_tmp')
 
         # See https://success.docker.com/KBase/Different_Types_of_Volumes
         # for a definition of different types of volumes.
@@ -340,40 +409,56 @@ class DockerCluster(ClusterManager):
             type='bind',
         )
 
-        # Mount cgroups into agents for Mesos DRF.
-        cgroup_mount = Mount(
-            source='/sys/fs/cgroup',
-            target='/sys/fs/cgroup',
-            read_only=True,
-            type='bind',
-        )
-
-        var_lib_docker_mount = Mount(
+        var_lib_docker_mount = Mount(source=None, target='/var/lib/docker')
+        opt_mount = Mount(source=None, target='/opt')
+        mesos_slave_mount = Mount(source=None, target='/var/lib/mesos/slave')
+        # By default systemd-journald uses the ``Storage=auto`` setting which
+        # writes journal logs under ``/run/log/journal`` in memory
+        # and persists them to ``/var/log/journal``.
+        # If ``/var/log/journal`` exists and is writable the files are saved
+        # there.
+        # ``journald`` uses at most 15% of available space, capped at 4.0 GB
+        # per node for logs.
+        # For many of our tests this (~200 MB) is not enough.
+        # We therefore give it space on disk, so that we can store up to
+        # 4.0 GB of logs per node.
+        #
+        # To see the space available, run:
+        # ``systemctl status systemd-journald -l``.
+        #
+        # We add file-system mounts here for ``/var/log/journal`` and
+        # ``/run/log/journal`` to save all journal logs to disk on the host
+        # file-system in order to free up memory of each E2E node.
+        run_log_journal_mount = Mount(
             source=None,
-            target='/var/lib/docker',
+            target='/run/log/journal',
+            read_only=False,
         )
-
-        opt_mount = Mount(
+        var_log_journal_mount = Mount(
             source=None,
-            target='/opt',
+            target='/var/log/journal',
+            read_only=False,
         )
 
-        mesos_slave_mount = Mount(
-            source=None,
-            target='/var/lib/mesos/slave',
-        )
-
-        agent_mounts = [
+        base_agent_mounts = [
             certs_mount,
             bootstrap_genconf_mount,
-            cgroup_mount,
             var_lib_docker_mount,
             opt_mount,
             mesos_slave_mount,
+            var_log_journal_mount,
+            run_log_journal_mount,
+        ]
+
+        agent_mounts = [
+            *base_agent_mounts,
+            *cluster_backend.cgroup_mounts,
             *cluster_backend.custom_container_mounts,
         ]
 
         master_mounts = [
+            var_log_journal_mount,
+            run_log_journal_mount,
             certs_mount,
             bootstrap_genconf_mount,
             var_lib_docker_mount,
@@ -436,79 +521,60 @@ class DockerCluster(ClusterManager):
                     network=cluster_backend.network,
                 )
 
-    def install_dcos_from_url_with_bootstrap_node(
+    def install_dcos_from_url(
         self,
-        build_artifact: str,
+        dcos_installer: str,
         dcos_config: Dict[str, Any],
         ip_detect_path: Path,
-        log_output_live: bool,
+        output: Output,
         files_to_copy_to_genconf_dir: Iterable[Tuple[Path, Path]],
     ) -> None:
         """
         Install DC/OS from a URL with a bootstrap node.
-        This is not supported and simply raises a ``NotImplementedError``.
 
         Args:
-            build_artifact: The URL string to a build artifact to install DC/OS
+            dcos_installer: The URL string to an installer to install DC/OS
                 from.
             dcos_config: The DC/OS configuration to use.
             ip_detect_path: The ``ip-detect`` script that is used for
                 installing DC/OS.
-            log_output_live: If ``True``, log output of the installation live.
+            output: What happens with stdout and stderr.
             files_to_copy_to_genconf_dir: Pairs of host paths to paths on
                 the installer node. These are files to copy from the host to
                 the installer node before installing DC/OS.
-
-        Raises:
-            NotImplementedError: ``NotImplementedError`` because the Docker
-                backend does not support the DC/OS advanced installation
-                method with a bootstrap node.
         """
-        raise NotImplementedError
+        cluster = Cluster.from_nodes(
+            masters=self.masters,
+            agents=self.agents,
+            public_agents=self.public_agents,
+        )
 
-    @property
-    def base_config(self) -> Dict[str, Any]:
-        """
-        Return a base configuration for installing DC/OS OSS, not including the
-        list of nodes.
-        """
-        ssh_user = self._default_user
-        return {
-            'bootstrap_url': 'file://' + str(self._bootstrap_tmp_path),
-            # Without this, we see errors like:
-            # "Time is not synchronized / marked as bad by the kernel.".
-            # Adam saw this on Docker for Mac 17.09.0-ce-mac35.
-            #
-            # In that case this was fixable with:
-            #   $ docker run --rm --privileged alpine hwclock -s
-            'check_time': 'false',
-            'cluster_name': 'DCOS',
-            'exhibitor_storage_backend': 'static',
-            'master_discovery': 'static',
-            'process_timeout': 10000,
-            'resolvers': ['8.8.8.8'],
-            'ssh_port': 22,
-            'ssh_user': ssh_user,
-        }
+        cluster.install_dcos_from_url(
+            dcos_installer=dcos_installer,
+            dcos_config=dcos_config,
+            ip_detect_path=ip_detect_path,
+            output=output,
+            files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
+        )
 
-    def install_dcos_from_path_with_bootstrap_node(
+    def install_dcos_from_path(
         self,
-        build_artifact: Path,
+        dcos_installer: Path,
         dcos_config: Dict[str, Any],
         ip_detect_path: Path,
-        log_output_live: bool,
+        output: Output,
         files_to_copy_to_genconf_dir: Iterable[Tuple[Path, Path]],
     ) -> None:
         """
-        Install DC/OS from a given build artifact.
+        Install DC/OS from a given installer.
 
         Args:
-            build_artifact: The ``Path`` to a build artifact to install DC/OS
+            dcos_installer: The ``Path`` to an installer to install DC/OS
                 from.
             dcos_config: The DC/OS configuration to use.
             ip_detect_path: The ``ip-detect`` script that is used for
                 installing DC/OS.
-            log_output_live: If ``True``, log output of the installation live.
+            output: What happens with stdout and stderr.
             files_to_copy_to_genconf_dir: Pairs of host paths to paths on
                 the installer node. These are files to copy from the host to
                 the installer node before installing DC/OS.
@@ -536,8 +602,7 @@ class DockerCluster(ClusterManager):
 
         genconf_args = [
             'bash',
-            str(build_artifact),
-            '--offline',
+            str(dcos_installer),
             '-v',
             '--genconf',
         ]
@@ -547,6 +612,18 @@ class DockerCluster(ClusterManager):
         )
         installer_port = _get_open_port()
 
+        log_output_live = {
+            Output.CAPTURE: False,
+            Output.LOG_AND_CAPTURE: True,
+            Output.NO_CAPTURE: False,
+        }[output]
+
+        capture_output = {
+            Output.CAPTURE: True,
+            Output.LOG_AND_CAPTURE: True,
+            Output.NO_CAPTURE: False,
+        }[output]
+
         run_subprocess(
             args=genconf_args,
             env={
@@ -555,6 +632,7 @@ class DockerCluster(ClusterManager):
             },
             log_output_live=log_output_live,
             cwd=str(self._path),
+            pipe_output=capture_output,
         )
 
         for role, nodes in [

@@ -10,8 +10,8 @@ from typing import Any, Dict, List
 
 import paramiko
 
-from dcos_e2e._common import run_subprocess
 from dcos_e2e._node_transports._base_classes import NodeTransport
+from dcos_e2e._subprocess_tools import run_subprocess
 
 
 def _compose_ssh_command(
@@ -69,8 +69,9 @@ def _compose_ssh_command(
         'UserKnownHostsFile=/dev/null',
         # Ignore warnings about remote host identification changes and new
         # hosts being added to the known hosts file in particular.
+        # Also ignore "Connection to <IP-ADDRESS> closed".
         '-o',
-        'LogLevel=ERROR',
+        'LogLevel=QUIET',
         str(public_ip_address),
     ] + [
         '{key}={value}'.format(key=k, value=quote(str(v)))
@@ -94,6 +95,7 @@ class SSHTransport(NodeTransport):
         tty: bool,
         ssh_key_path: Path,
         public_ip_address: IPv4Address,
+        capture_output: bool,
     ) -> subprocess.CompletedProcess:
         """
         Run a command on this node the given user.
@@ -113,6 +115,7 @@ class SSHTransport(NodeTransport):
             ssh_key_path: The path to an SSH key which can be used to SSH to
                 the node as the ``user`` user.
             public_ip_address: The public IP address of the node.
+            capture_output: Whether to capture output in the result.
 
         Returns:
             The representation of the finished process.
@@ -133,7 +136,7 @@ class SSHTransport(NodeTransport):
         return run_subprocess(
             args=ssh_args,
             log_output_live=log_output_live,
-            pipe_output=not tty,
+            pipe_output=capture_output,
         )
 
     def popen(
@@ -204,4 +207,37 @@ class SSHTransport(NodeTransport):
                 sftp.put(
                     localpath=str(local_path),
                     remotepath=str(remote_path),
+                )
+
+    def download_file(
+        self,
+        remote_path: Path,
+        local_path: Path,
+        user: str,
+        ssh_key_path: Path,
+        public_ip_address: IPv4Address,
+    ) -> None:
+        """
+        Download a file from this node.
+
+        Args:
+            remote_path: The path on the node to download the file from.
+            local_path: The path on the host to download the file to.
+            user: The name of the remote user to send the file.
+            ssh_key_path: The path to an SSH key which can be used to SSH to
+                the node as the ``user`` user.
+            public_ip_address: The public IP address of the node.
+        """
+        with paramiko.SSHClient() as ssh_client:
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(
+                str(public_ip_address),
+                username=user,
+                key_filename=str(ssh_key_path),
+            )
+
+            with ssh_client.open_sftp() as sftp:
+                sftp.get(
+                    remotepath=str(remote_path),
+                    localpath=str(local_path),
                 )

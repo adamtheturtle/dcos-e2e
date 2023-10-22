@@ -1,11 +1,10 @@
 """
-Run tests and linters on Travis CI.
+Run tests and linters on CI.
 """
 
 import os
-import subprocess
 import sys
-from typing import Dict, Tuple  # noqa: F401
+from typing import Dict  # noqa: F401
 
 import pytest
 
@@ -21,20 +20,13 @@ def run_test(test_pattern: str) -> None:
             '--capture',
             'no',
             test_pattern,
-            '--cov',
-            'src/dcos_e2e',
-            '--cov',
-            'tests',
+            '--cov=src/dcos_e2e',
+            '--cov=tests',
         ],
     )
     sys.exit(result)
 
 
 if __name__ == '__main__':
-    CI_PATTERN = os.environ.get('CI_PATTERN')
-    if CI_PATTERN:
-        run_test(test_pattern=CI_PATTERN)
-    else:
-        subprocess.check_call(['make', 'lint'])
-        subprocess.check_call(['dcos-docker', 'doctor'])
-        subprocess.check_call(['make', 'docs'])
+    CI_PATTERN = os.environ['CI_PATTERN']
+    run_test(test_pattern=CI_PATTERN)

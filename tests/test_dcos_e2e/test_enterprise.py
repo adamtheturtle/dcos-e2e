@@ -1,8 +1,7 @@
 """
-Tests for using the test harness with a DC/OS Enterprise cluster.
+5ests for using the test harness with a DC/OS Enterprise cluster.
 """
 
-import json
 import subprocess
 import uuid
 from pathlib import Path
@@ -10,9 +9,9 @@ from pathlib import Path
 import requests
 from passlib.hash import sha512_crypt
 
-from dcos_e2e.backends import ClusterBackend
+from dcos_e2e.base_classes import ClusterBackend
 from dcos_e2e.cluster import Cluster
-from dcos_e2e.node import Role
+from dcos_e2e.node import Output, Role
 
 
 class TestEnterpriseIntegrationTests:
@@ -23,7 +22,7 @@ class TestEnterpriseIntegrationTests:
     def test_run_pytest(
         self,
         cluster_backend: ClusterBackend,
-        enterprise_artifact: Path,
+        enterprise_installer: Path,
         license_key_contents: str,
     ) -> None:
         """
@@ -41,26 +40,29 @@ class TestEnterpriseIntegrationTests:
 
         with Cluster(cluster_backend=cluster_backend) as cluster:
             cluster.install_dcos_from_path(
-                build_artifact=enterprise_artifact,
+                dcos_installer=enterprise_installer,
                 dcos_config={
                     **cluster.base_config,
                     **config,
                 },
                 ip_detect_path=cluster_backend.ip_detect_path,
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
             )
             cluster.wait_for_dcos_ee(
                 superuser_username=superuser_username,
                 superuser_password=superuser_password,
             )
+
             # No error is raised with a successful command.
-            cluster.run_integration_tests(
-                pytest_command=['pytest', '-vvv', '-s', '-x', 'test_tls.py'],
+            # We choose a test file which runs very quickly.
+            fast_test_file = 'test_marathon_authn_authz.py'
+            cluster.run_with_test_environment(
+                args=['pytest', '-vvv', '-s', '-x', fast_test_file],
                 env={
                     'DCOS_LOGIN_UNAME': superuser_username,
                     'DCOS_LOGIN_PW': superuser_password,
                 },
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
             )
 
 
@@ -72,7 +74,7 @@ class TestCopyFiles:
     def test_copy_files_to_installer(
         self,
         cluster_backend: ClusterBackend,
-        enterprise_artifact: Path,
+        enterprise_installer: Path,
         license_key_contents: str,
     ) -> None:
         """
@@ -131,12 +133,12 @@ class TestCopyFiles:
             )
 
             cluster.install_dcos_from_path(
-                build_artifact=enterprise_artifact,
+                dcos_installer=enterprise_installer,
                 dcos_config={
                     **cluster.base_config,
                     **config,
                 },
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
             )
@@ -160,7 +162,7 @@ class TestCopyFiles:
     def test_copy_directory_to_installer(
         self,
         cluster_backend: ClusterBackend,
-        enterprise_artifact: Path,
+        enterprise_installer: Path,
         license_key_contents: str,
     ) -> None:
         """
@@ -216,12 +218,12 @@ class TestCopyFiles:
             )
 
             cluster.install_dcos_from_path(
-                build_artifact=enterprise_artifact,
+                dcos_installer=enterprise_installer,
                 dcos_config={
                     **cluster.base_config,
                     **config,
                 },
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=files_to_copy_to_genconf_dir,
             )
@@ -237,7 +239,7 @@ class TestCopyFiles:
     def test_copy_directory_to_node_installer_genconf_dir(
         self,
         cluster_backend: ClusterBackend,
-        enterprise_artifact: Path,
+        enterprise_installer: Path,
         license_key_contents: str,
     ) -> None:
         """
@@ -288,7 +290,7 @@ class TestCopyFiles:
                 remote_path=master_key_path,
             )
             master.install_dcos_from_path(
-                build_artifact=enterprise_artifact,
+                dcos_installer=enterprise_installer,
                 dcos_config={
                     **cluster.base_config,
                     **config,
@@ -296,7 +298,7 @@ class TestCopyFiles:
                 ip_detect_path=cluster_backend.ip_detect_path,
                 role=Role.MASTER,
                 files_to_copy_to_genconf_dir=[(cert_dir_on_host, genconf)],
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
             )
 
             cluster.wait_for_dcos_ee(
@@ -308,59 +310,6 @@ class TestCopyFiles:
             response.raise_for_status()
 
 
-class TestSSLDisabled:
-    """
-    Tests for clusters with SSL disabled.
-    """
-
-    def test_wait_for_dcos_ee(
-        self,
-        cluster_backend: ClusterBackend,
-        enterprise_1_11_artifact: Path,
-        license_key_contents: str,
-    ) -> None:
-        """
-        A cluster can start up with SSL disabled.
-        """
-        superuser_username = str(uuid.uuid4())
-        superuser_password = str(uuid.uuid4())
-        config = {
-            'superuser_username': superuser_username,
-            'superuser_password_hash': sha512_crypt.hash(superuser_password),
-            'fault_domain_enabled': False,
-            'license_key_contents': license_key_contents,
-            'security': 'disabled',
-        }
-
-        with Cluster(
-            cluster_backend=cluster_backend,
-            agents=0,
-            public_agents=0,
-        ) as cluster:
-            cluster.install_dcos_from_path(
-                build_artifact=enterprise_1_11_artifact,
-                dcos_config={
-                    **cluster.base_config,
-                    **config,
-                },
-                log_output_live=True,
-                ip_detect_path=cluster_backend.ip_detect_path,
-            )
-            cluster.wait_for_dcos_ee(
-                superuser_username=superuser_username,
-                superuser_password=superuser_password,
-            )
-
-            # On 1.11 with security mode disabled, SSL is disabled.
-            any_master = next(iter(cluster.masters))
-            config_result = any_master.run(
-                args=['cat', '/opt/mesosphere/etc/bootstrap-config.json'],
-            )
-            config = json.loads(config_result.stdout.decode())
-            ssl_enabled = config['ssl_enabled']
-            assert not ssl_enabled
-
-
 class TestWaitForDCOS:
     """
     Tests for `Cluster.wait_for_dcos_ee`.
@@ -369,7 +318,7 @@ class TestWaitForDCOS:
     def test_auth_with_cli(
         self,
         cluster_backend: ClusterBackend,
-        enterprise_artifact: Path,
+        enterprise_installer: Path,
         license_key_contents: str,
     ) -> None:
         """
@@ -387,12 +336,12 @@ class TestWaitForDCOS:
 
         with Cluster(cluster_backend=cluster_backend) as cluster:
             cluster.install_dcos_from_path(
-                build_artifact=enterprise_artifact,
+                dcos_installer=enterprise_installer,
                 dcos_config={
                     **cluster.base_config,
                     **config,
                 },
-                log_output_live=True,
+                output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
             )
             (master, ) = cluster.masters

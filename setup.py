@@ -41,7 +41,7 @@ setup(
     version=versioneer.get_version(),  # type: ignore
     cmdclass=versioneer.get_cmdclass(),  # type: ignore
     author='Adam Dangoor',
-    author_email='adangoor@mesosphere.com',
+    author_email='adamdangoor@gmail.com',
     description='Test helpers for testing DC/OS end to end.',
     long_description=LONG_DESCRIPTION,
     packages=find_packages(where='src'),
@@ -59,8 +59,9 @@ setup(
     classifiers=[
         'Operating System :: POSIX',
         'Environment :: Web Environment',
-        'Programming Language :: Python :: 3.5',
-        'License :: OSI Approved :: Apache License 2.0',
+        'Programming Language :: Python :: 3.6',
+        'License :: OSI Approved :: Apache Software License',
+        'Development Status :: 5 - Production/Stable',
     ],
     # Avoid dependency links because they are not supported by Read The Docs.
     #
@@ -68,8 +69,6 @@ setup(
     dependency_links=[],
     entry_points="""
         [console_scripts]
-        dcos-docker=cli.dcos_docker:dcos_docker
-        dcos-vagrant=cli.dcos_vagrant:dcos_vagrant
-        dcos-aws=cli.dcos_aws:dcos_aws
+        minidcos=dcos_e2e_cli.minidcos:minidcos
     """,
 )
