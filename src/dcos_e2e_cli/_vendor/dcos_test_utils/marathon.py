@@ -111,7 +111,7 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
         r.raise_for_status()
         data = r.json()
         res = [Endpoint(t['host'], t['ports'][0], t['ipAddresses'][0]['ipAddress'])
-               if len(t['ports']) is not 0
+               if len(t['ports']) != 0
                else Endpoint(t['host'], 0, t['ipAddresses'][0]['ipAddress'])
                for t in data['app']['tasks']]
         log.info('Application deployed, running on {}'.format(res))

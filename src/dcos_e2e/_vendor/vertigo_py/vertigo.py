@@ -36,7 +36,7 @@ def ls(option="all", longform=False):
     if longform:
         cmd.append("--long")
 
-    if not option in constants.lsopts and not option == "all":
+    if option not in constants.lsopts and not option == "all":
         raise UnknownOptionError("list", option)
 
     if option == "all":
@@ -81,7 +81,7 @@ def registervm(self, filename):
     args = [constants.cmd, "registervm", filename]
 
     try:
-        result = subprocess.check_output(args)
+        subprocess.check_output(args)
     except subprocess.CalledProcessError as e:
         raise RegistrationError(filename, e)
 
@@ -97,7 +97,7 @@ def registervm(self, filename):
 # Raises NoMediumError if the device type is invalid, CommandError if there's
 #        some other error
 def closemedium(self, device, target, delete=False):
-        if not device in constants.closemediumopts:
+        if device not in constants.closemediumopts:
             raise NoMediumError(device, target, delete)
 
         args = [constants.cmd, "closemedium", target]
@@ -122,7 +122,7 @@ class VM(object):
     # Returns a VM object wrapping the VirtualBox VM
     # Raises UnknownVMError if VM corresponding to the name or UUID is not found
     def __init__(self, name=None, uuid=None):
-        if name == None and uuid == None:
+        if name is None and uuid is None:
             raise UnknownVMError(name, uuid)
 
         if not name:
@@ -246,7 +246,7 @@ class VM(object):
         if delete:
             args += ["--delete"]
         try:
-            result = subprocess.check_output(args)
+            subprocess.check_output(args)
         except subprocess.CalledProcessError as e:
             raise CommandError(args, e)
 
@@ -264,15 +264,15 @@ class VM(object):
     def modifyvm(self,option=None,*optargs):
 
         optargs = list(optargs)
-        if not option in constants.modopts:
+        if option not in constants.modopts:
             raise UnknownOptionError("modifyvm", option)
         else:
             args = [constants.cmd, "modifyvm", self.name]
 
         if option in constants.modboolopts:
-            if optargs[0] == True or optargs[0] == "on":
+            if optargs[0] is True or optargs[0] == "on":
                 args += ["on"]
-            elif optargs[1] == False or optargs[0] == "off":
+            elif optargs[1] is False or optargs[0] == "off":
                 args += ["off"]
             else:
                 raise UnknownOptionError("modifyvm " + option, optargs[0])
@@ -285,7 +285,7 @@ class VM(object):
             args += ["--" + option + str(index)] + optargs[1:]
 
         elif option in constants.modenumopts.keys():
-            if not optargs[0] in constants.modenumopts[option]:
+            if optargs[0] not in constants.modenumopts[option]:
                 raise UnknownOptionError("modifyvm " + option, optargs[0])
             else:
                 args += ["--" + option, optargs[0]]
@@ -312,15 +312,15 @@ class VM(object):
     def controlvm(self,option=None,*optargs):
 
         optargs = list(optargs)
-        if not option in constants.ctrlopts:
+        if option not in constants.ctrlopts:
             raise UnknownOptionError("controlvm", option)
         else:
             args = [constants.cmd, "controlvm", self.name]
 
         if option in constants.ctrlboolopts:
-            if optargs[0] == True or optargs[0] == "on":
+            if optargs[0] is True or optargs[0] == "on":
                 args += ["on"]
-            elif optargs[1] == False or optargs[0] == "off":
+            elif optargs[1] is False or optargs[0] == "off":
                 args += ["off"]
             else:
                 raise UnknownOptionError("modifyvm " + option, optargs[0])
