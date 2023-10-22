@@ -14,54 +14,54 @@ def _get_dependencies(requirements_file: Path) -> List[str]:
 
     This expects a requirements file with no ``--find-links`` lines.
     """
-    lines = requirements_file.read_text().strip().split('\n')
-    return [line for line in lines if not line.startswith('#')]
+    lines = requirements_file.read_text().strip().split("\n")
+    return [line for line in lines if not line.startswith("#")]
 
 
 _DIRECT_REQUIRES = _get_dependencies(
-    requirements_file=Path('requirements.txt'),
+    requirements_file=Path("requirements.txt"),
 )
 
 _INDIRECT_REQUIRES = _get_dependencies(
-    requirements_file=Path('indirect-requirements.txt'),
+    requirements_file=Path("indirect-requirements.txt"),
 )
 
 INSTALL_REQUIRES = _DIRECT_REQUIRES + _INDIRECT_REQUIRES
 DEV_REQUIRES = _get_dependencies(
-    requirements_file=Path('dev-requirements.txt'),
+    requirements_file=Path("dev-requirements.txt"),
 )
 PACKAGING_REQUIRES = _get_dependencies(
-    requirements_file=Path('packaging-requirements.txt'),
+    requirements_file=Path("packaging-requirements.txt"),
 )
 
-LONG_DESCRIPTION = Path('README.rst').read_text()
+LONG_DESCRIPTION = Path("README.rst").read_text()
 
 setup(
-    name='DCOS E2E',
+    name="DCOS E2E",
     version=versioneer.get_version(),  # type: ignore
     cmdclass=versioneer.get_cmdclass(),  # type: ignore
-    author='Adam Dangoor',
-    author_email='adamdangoor@gmail.com',
-    description='Test helpers for testing DC/OS end to end.',
+    author="Adam Dangoor",
+    author_email="adamdangoor@gmail.com",
+    description="Test helpers for testing DC/OS end to end.",
     long_description=LONG_DESCRIPTION,
-    packages=find_packages(where='src'),
+    packages=find_packages(where="src"),
     zip_safe=False,
-    package_dir={'': 'src'},
+    package_dir={"": "src"},
     install_requires=INSTALL_REQUIRES,
     include_package_data=True,
-    license='Apache License 2.0',
-    keywords='dcos mesos docker',
-    url='https://github.com/dcos/dcos-e2e',
+    license="Apache License 2.0",
+    keywords="dcos mesos docker",
+    url="https://github.com/dcos/dcos-e2e",
     extras_require={
-        'dev': DEV_REQUIRES,
-        'packaging': PACKAGING_REQUIRES,
+        "dev": DEV_REQUIRES,
+        "packaging": PACKAGING_REQUIRES,
     },
     classifiers=[
-        'Operating System :: POSIX',
-        'Environment :: Web Environment',
-        'Programming Language :: Python :: 3.6',
-        'License :: OSI Approved :: Apache Software License',
-        'Development Status :: 5 - Production/Stable',
+        "Operating System :: POSIX",
+        "Environment :: Web Environment",
+        "Programming Language :: Python :: 3.6",
+        "License :: OSI Approved :: Apache Software License",
+        "Development Status :: 5 - Production/Stable",
     ],
     # Avoid dependency links because they are not supported by Read The Docs.
     #

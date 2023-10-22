@@ -15,5 +15,5 @@ def launch_web_ui(cluster: Cluster) -> None:
         cluster: The cluster to launch a web UI for.
     """
     master = next(iter(cluster.masters))
-    web_ui = 'http://' + str(master.public_ip_address)
+    web_ui = "http://" + str(master.public_ip_address)
     click.launch(web_ui)

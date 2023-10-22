@@ -23,8 +23,8 @@ from ._common import docker_client
 
 # These names cannot include the standard container name prefix else they
 # conflict with "minidcos docker clean".
-_PROXY_CONTAINER_NAME = 'vpn-proxy'
-_OPENVPN_CONTAINER_NAME = 'vpn-openvpn'
+_PROXY_CONTAINER_NAME = "vpn-proxy"
+_OPENVPN_CONTAINER_NAME = "vpn-openvpn"
 
 
 def _get_ovpn_file_destination(
@@ -40,9 +40,9 @@ def _get_ovpn_file_destination(
 
     path = value.expanduser()
     if path.is_dir():
-        path = path / 'docker-for-mac.ovpn'
+        path = path / "docker-for-mac.ovpn"
 
-    if path.suffix != '.ovpn':
+    if path.suffix != ".ovpn":
         message = '"{value}" does not have the suffix ".ovpn".'.format(
             value=value,
         )
@@ -59,11 +59,11 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
     """
     with Halo(enabled=enable_spinner):
         client = docker_client()
-        restart_policy = {'Name': 'always', 'MaximumRetryCount': 0}
+        restart_policy = {"Name": "always", "MaximumRetryCount": 0}
 
-        clone_name = 'docker-mac-network-master'
+        clone_name = "docker-mac-network-master"
         docker_mac_network_clone = Path(__file__).parent / clone_name
-        openvpn_dockerfile = Path(__file__).parent / 'openvpn'
+        openvpn_dockerfile = Path(__file__).parent / "openvpn"
 
         tmpdir = TemporaryDirectory()
         openvpn_build_path = Path(tmpdir.name).resolve()
@@ -71,13 +71,13 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
         # next run.
         rmtree(path=tmpdir.name)
         copytree(src=str(openvpn_dockerfile), dst=str(openvpn_build_path))
-        docker_mac_network = openvpn_build_path / 'docker-mac-network-master'
+        docker_mac_network = openvpn_build_path / "docker-mac-network-master"
         copytree(
             src=str(docker_mac_network_clone),
             dst=str(docker_mac_network),
         )
 
-        proxy_image_tag = '{prefix}/proxy'.format(
+        proxy_image_tag = "{prefix}/proxy".format(
             prefix=Docker().container_name_prefix,
         )
         client.images.build(
@@ -87,7 +87,7 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
             tag=proxy_image_tag,
         )
 
-        openvpn_image_tag = '{prefix}/openvpn'.format(
+        openvpn_image_tag = "{prefix}/openvpn".format(
             prefix=Docker().container_name_prefix,
         )
         client.images.build(
@@ -97,8 +97,8 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
             tag=openvpn_image_tag,
         )
 
-        proxy_command = 'TCP-LISTEN:13194,fork TCP:172.17.0.1:1194'
-        proxy_ports = {'13194/tcp': ('127.0.0.1', '13194')}
+        proxy_command = "TCP-LISTEN:13194,fork TCP:172.17.0.1:1194"
+        proxy_ports = {"13194/tcp": ("127.0.0.1", "13194")}
 
         client.containers.run(
             image=proxy_image_tag,
@@ -112,13 +112,13 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
         openvpn_container = client.containers.run(
             image=openvpn_image_tag,
             restart_policy=restart_policy,
-            cap_add=['NET_ADMIN'],
+            cap_add=["NET_ADMIN"],
             environment={
-                'dest': 'docker-for-mac.ovpn',
-                'DEBUG': 1,
+                "dest": "docker-for-mac.ovpn",
+                "DEBUG": 1,
             },
-            command='/local/helpers/run.sh',
-            network_mode='host',
+            command="/local/helpers/run.sh",
+            network_mode="host",
             detach=True,
             name=_OPENVPN_CONTAINER_NAME,
         )
@@ -126,7 +126,7 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
         while True:
             try:
                 raw_stream, _ = openvpn_container.get_archive(
-                    path='/local/docker-for-mac.ovpn',
+                    path="/local/docker-for-mac.ovpn",
                 )
             except docker.errors.NotFound:
                 time.sleep(1)
@@ -134,10 +134,10 @@ def _create_mac_network(configuration_dst: Path, enable_spinner: bool) -> None:
                 break
 
         temporary_extract_dst = Path(TemporaryDirectory().name).resolve()
-        tar_archive = BytesIO(b''.join((i for i in raw_stream)))
-        open_tar = tarfile.open(mode='r:', fileobj=tar_archive)
+        tar_archive = BytesIO(b"".join((i for i in raw_stream)))
+        open_tar = tarfile.open(mode="r:", fileobj=tar_archive)
         open_tar.extractall(path=str(temporary_extract_dst))
-        configuration_src = temporary_extract_dst / 'docker-for-mac.ovpn'
+        configuration_src = temporary_extract_dst / "docker-for-mac.ovpn"
         copy(src=str(configuration_src), dst=str(configuration_dst))
 
 
@@ -156,21 +156,21 @@ def _destroy_mac_network_containers(enable_spinner: bool) -> None:
                 container.remove(v=True, force=True)
 
 
-@click.command('setup-mac-network')
+@click.command("setup-mac-network")
 @click.option(
-    '--configuration-dst',
+    "--configuration-dst",
     type=click_pathlib.Path(exists=False),
-    default='~/Documents/docker-for-mac.ovpn',
+    default="~/Documents/docker-for-mac.ovpn",
     callback=_get_ovpn_file_destination,
     show_default=True,
-    help='The location to create an OpenVPN configuration file.',
+    help="The location to create an OpenVPN configuration file.",
 )
 @click.option(
-    '--force',
+    "--force",
     is_flag=True,
     help=(
-        'Overwrite any files and destroy conflicting containers from previous '
-        'uses of this command.'
+        "Overwrite any files and destroy conflicting containers from previous "
+        "uses of this command."
     ),
 )
 @enable_spinner_option
@@ -184,23 +184,23 @@ def setup_mac_network(
 
     This creates an OpenVPN configuration file and describes how to use it.
     """
-    profile_name = configuration_dst.with_suffix('').name
+    profile_name = configuration_dst.with_suffix("").name
 
     configuration_instructions = (
-        '1. Install an OpenVPN client such as Tunnelblick '
-        '(https://tunnelblick.net/downloads.html) '
-        'or Shimo (https://www.shimovpn.com).'
-        '\n'
+        "1. Install an OpenVPN client such as Tunnelblick "
+        "(https://tunnelblick.net/downloads.html) "
+        "or Shimo (https://www.shimovpn.com)."
+        "\n"
         '2. Run "open {configuration_dst}".'
-        '\n'
+        "\n"
         '3. If your OpenVPN client is Shimo, edit the new "{profile_name}" '
         'profile\'s Advanced settings to deselect "Send all traffic over VPN".'
-        '\n'
+        "\n"
         '4. In your OpenVPN client, connect to the new "{profile_name}" '
-        'profile.'
-        '\n'
+        "profile."
+        "\n"
         '5. Run "minidcos docker doctor" to confirm that everything is '
-        'working.'
+        "working."
     ).format(
         configuration_dst=configuration_dst,
         profile_name=profile_name,
@@ -209,11 +209,11 @@ def setup_mac_network(
     if configuration_dst.exists() and not force:
         already_exists_message = (
             '"{configuration_dst}" already exists so no new OpenVPN '
-            'configuration was created.'
-            '\n'
-            '\n'
-            'To use {configuration_dst}:'
-            '\n'
+            "configuration was created."
+            "\n"
+            "\n"
+            "To use {configuration_dst}:"
+            "\n"
         ).format(
             configuration_dst=configuration_dst,
         ) + configuration_instructions
@@ -230,24 +230,24 @@ def setup_mac_network(
     except docker.errors.APIError as exc:
         if exc.status_code == 409:
             message = (
-                'Error: A custom macOS network container is already running. '
-                'Use --force to destroy conflicting containers.'
+                "Error: A custom macOS network container is already running. "
+                "Use --force to destroy conflicting containers."
             )
             click.echo(message, err=True)
             sys.exit(1)
         raise
     except docker.errors.BuildError as exc:
-        message = 'Error: There was a problem building a Docker image:\n'
+        message = "Error: There was a problem building a Docker image:\n"
         click.echo(message, err=True)
         for line in exc.build_log:
-            if 'stream' in line:
-                click.echo('   ' + line['stream'].strip(), err=True)
+            if "stream" in line:
+                click.echo("   " + line["stream"].strip(), err=True)
         sys.exit(1)
 
     click.echo(message=configuration_instructions)
 
 
-@click.command('destroy-mac-network')
+@click.command("destroy-mac-network")
 @enable_spinner_option
 def destroy_mac_network(enable_spinner: bool) -> None:
     """
@@ -256,11 +256,11 @@ def destroy_mac_network(enable_spinner: bool) -> None:
     _destroy_mac_network_containers(enable_spinner=enable_spinner)
     message = (
         "The containers used to allow access to Docker for Mac's internal "
-        'networks have been removed.'
-        '\n'
-        '\n'
+        "networks have been removed."
+        "\n"
+        "\n"
         'It may be the case that the "docker-for-mac" profile still exists in '
-        'your OpenVPN client.'
+        "your OpenVPN client."
     )
 
     click.echo(message=message)

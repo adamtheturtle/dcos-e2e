@@ -16,9 +16,11 @@ from azure.common.credentials import ServicePrincipalCredentials
 from azure.common.exceptions import CloudError
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.resource.resources.v2016_02_01 import ResourceManagementClient
-from azure.mgmt.resource.resources.v2016_02_01.models import (DeploymentMode,
-                                                              DeploymentProperties,
-                                                              ResourceGroup)
+from azure.mgmt.resource.resources.v2016_02_01.models import (
+    DeploymentMode,
+    DeploymentProperties,
+    ResourceGroup,
+)
 from azure.monitor import MonitorClient
 from ...dcos_launch.util import DeploymentError
 from ...dcos_test_utils.helpers import Host
@@ -28,7 +30,7 @@ log = logging.getLogger(__name__)
 # This interface is designed to only use a single deployment.
 # Being as the azure interface is based around resource groups, deriving
 # deployment name from group names makes it easier to attach to creating deploys
-DEPLOYMENT_NAME = '{}-Deployment'
+DEPLOYMENT_NAME = "{}-Deployment"
 
 
 def validate_hostname_prefix(prefix):
@@ -37,22 +39,24 @@ def validate_hostname_prefix(prefix):
     valiation occurs. This check in particular was aggravating as no docs surfaced
     this issue, so logs needed to be scanned just to discover this error
     """
-    assert re.match('^[a-z][a-z0-9-]{1,61}[a-z0-9]$', prefix), 'Invalid DNS prefix: {}'.format(prefix)
+    assert re.match(
+        "^[a-z][a-z0-9-]{1,61}[a-z0-9]$", prefix
+    ), "Invalid DNS prefix: {}".format(prefix)
 
 
 def check_json_object(obj):
-    """ Simple check to fill in the map for automatic parameter casting
+    """Simple check to fill in the map for automatic parameter casting
     JSON objects must be represented as dict at this level
     """
-    assert isinstance(obj, dict), 'Invalid JSON object: {}'.format(obj)
+    assert isinstance(obj, dict), "Invalid JSON object: {}".format(obj)
     return obj
 
 
 def check_array(arr):
-    """ Simple check to fill in the map for automatic parameter casting
+    """Simple check to fill in the map for automatic parameter casting
     JSON arrays must be represented as lists at this level
     """
-    assert isinstance(arr, list), 'Invalid array: {}'.format(arr)
+    assert isinstance(arr, list), "Invalid array: {}".format(arr)
     return arr
 
 
@@ -62,16 +66,24 @@ def nic_to_host(nic, public_ip=None):
     if ip_config.public_ip_address is None and public_ip is None:
         return Host(ip_config.private_ip_address, None)
     if public_ip is None:
-        return Host(ip_config.private_ip_address, ip_config.public_ip_address.ip_address)
+        return Host(
+            ip_config.private_ip_address, ip_config.public_ip_address.ip_address
+        )
     return Host(ip_config.private_ip_address, public_ip)
 
 
 class AzureWrapper:
-    def __init__(self, location: str, subscription_id: str, client_id: str, client_secret: str, tenant_id: str):
+    def __init__(
+        self,
+        location: str,
+        subscription_id: str,
+        client_id: str,
+        client_secret: str,
+        tenant_id: str,
+    ):
         self.credentials = ServicePrincipalCredentials(
-            client_id=client_id,
-            secret=client_secret,
-            tenant=tenant_id)
+            client_id=client_id, secret=client_secret, tenant=tenant_id
+        )
         self.rmc = ResourceManagementClient(self.credentials, subscription_id)
         self.nmc = NetworkManagementClient(self.credentials, subscription_id)
         self.mc = MonitorClient(self.credentials, subscription_id)
@@ -79,20 +91,22 @@ class AzureWrapper:
         self.location = location
 
     def deploy_template_to_new_resource_group(
-            self, template_url, group_name, parameters, tags=None, template=None):
+        self, template_url, group_name, parameters, tags=None, template=None
+    ):
         if tags is None:
             tags = dict()
-        log.info('Checking deployment parameters vs template before starting...')
+        log.info("Checking deployment parameters vs template before starting...")
         deployment_properties = self.create_deployment_properties(
-            template_url, parameters, template=template)
+            template_url, parameters, template=template
+        )
         deployment_name = DEPLOYMENT_NAME.format(group_name)
         # Resource group must be created before validation can occur
         if self.rmc.resource_groups.check_existence(group_name):
             raise Exception("Group name already exists / taken: {}".format(group_name))
-        log.info('Starting resource group_creation')
+        log.info("Starting resource group_creation")
 
         def get_all_details(error):
-            formatted_message = '{}: {}\n\n'.format(error.code, error.message)
+            formatted_message = "{}: {}\n\n".format(error.code, error.message)
             if error.details is None:
                 return formatted_message
             for d in error.details:
@@ -101,76 +115,109 @@ class AzureWrapper:
 
         with contextlib.ExitStack() as stack:
             self.rmc.resource_groups.create_or_update(
-                group_name,
-                ResourceGroup(location=self.location, tags=tags))
+                group_name, ResourceGroup(location=self.location, tags=tags)
+            )
             # Ensure the resource group will be deleted if the following steps fail
             stack.callback(self.rmc.resource_groups.delete, group_name)
-            log.info('Resource group created: {}'.format(group_name))
-            log.info('Checking with Azure to validate template deployment')
+            log.info("Resource group created: {}".format(group_name))
+            log.info("Checking with Azure to validate template deployment")
             result = self.rmc.deployments.validate(
-                group_name, deployment_name, properties=deployment_properties)
+                group_name, deployment_name, properties=deployment_properties
+            )
             if result.error:
-                raise Exception("Template verification failed!\n{}".format(get_all_details(result.error)))
-            log.info('Template successfully validated')
-            log.info('Starting template deployment')
+                raise Exception(
+                    "Template verification failed!\n{}".format(
+                        get_all_details(result.error)
+                    )
+                )
+            log.info("Template successfully validated")
+            log.info("Starting template deployment")
             self.rmc.deployments.create_or_update(
-                group_name, deployment_name, deployment_properties, raw=True)
+                group_name, deployment_name, deployment_properties, raw=True
+            )
             stack.pop_all()
-        log.info('Successfully started template deployment')
+        log.info("Successfully started template deployment")
 
-    def create_deployment_properties(self, template_url, parameters, template: dict=None):
-        """ Pulls the targeted template, checks parameter specs and casts
+    def create_deployment_properties(
+        self, template_url, parameters, template: dict = None
+    ):
+        """Pulls the targeted template, checks parameter specs and casts
         user provided parameters to the appropriate type. Assertion is raised
         if there are unused parameters or invalid casting
         """
         user_parameters = copy.deepcopy(parameters)
         type_cast_map = {
-            'string': str,
-            'securestring': str,
-            'int': int,
-            'bool': bool,
-            'object': check_json_object,
-            'secureObject': check_json_object,
-            'array': check_array}
-        log.debug('Pulling Azure template for parameter validation...')
+            "string": str,
+            "securestring": str,
+            "int": int,
+            "bool": bool,
+            "object": check_json_object,
+            "secureObject": check_json_object,
+            "array": check_array,
+        }
+        log.debug("Pulling Azure template for parameter validation...")
         if template is None:
             r = requests.get(template_url)
             r.raise_for_status()
             template = r.json()
-        if 'parameters' not in template:
-            assert user_parameters is None, 'This template does not support parameters, ' \
-                'yet parameters were supplied: {}'.format(user_parameters)
-        log.debug('Constructing DeploymentProperties from user parameters: {}'.format(parameters))
+        if "parameters" not in template:
+            assert user_parameters is None, (
+                "This template does not support parameters, "
+                "yet parameters were supplied: {}".format(user_parameters)
+            )
+        log.debug(
+            "Constructing DeploymentProperties from user parameters: {}".format(
+                parameters
+            )
+        )
         template_parameters = {}
-        for k, v in template['parameters'].items():
+        for k, v in template["parameters"].items():
             if k in user_parameters:
                 # All templates parameters are required to have a type field.
                 # Azure requires that parameters be provided as {key: {'value': value}}.
                 template_parameters[k] = {
-                    'value': type_cast_map[v['type']](user_parameters.pop(k))}
-        log.debug('Final template parameters: {}'.format(template_parameters))
+                    "value": type_cast_map[v["type"]](user_parameters.pop(k))
+                }
+        log.debug("Final template parameters: {}".format(template_parameters))
         if len(user_parameters) > 0:
-            raise Exception('Unrecognized template parameters were supplied: {}'.format(user_parameters))
+            raise Exception(
+                "Unrecognized template parameters were supplied: {}".format(
+                    user_parameters
+                )
+            )
         return DeploymentProperties(
             template=template,
             mode=DeploymentMode.incremental,
-            parameters=template_parameters)
+            parameters=template_parameters,
+        )
 
 
 class DcosAzureResourceGroup:
-    """ An abstraction for cleanly handling the life cycle of a DC/OS template
+    """An abstraction for cleanly handling the life cycle of a DC/OS template
     deployment. Operations include: create, wait, describe host IPs, and delete
     """
+
     def __init__(self, group_name, azure_wrapper):
         self.group_name = group_name
         self.azure_wrapper = azure_wrapper
 
     @classmethod
     def deploy_acs_template(
-            cls, azure_wrapper: AzureWrapper, template_url: str, group_name: str,
-            public_key, master_prefix, agent_prefix, admin_name, oauth_enabled,
-            vm_size, agent_count, name_suffix, vm_diagnostics_enabled):
-        """ Creates a new resource group and deploys a ACS DC/OS template to it
+        cls,
+        azure_wrapper: AzureWrapper,
+        template_url: str,
+        group_name: str,
+        public_key,
+        master_prefix,
+        agent_prefix,
+        admin_name,
+        oauth_enabled,
+        vm_size,
+        agent_count,
+        name_suffix,
+        vm_diagnostics_enabled,
+    ):
+        """Creates a new resource group and deploys a ACS DC/OS template to it
         using a subset of parameters for a simple deployment. To see a full
         listing of parameters, including description and formatting, go to:
         gen/azure/templates/acs.json in this repository.
@@ -192,26 +239,32 @@ class DcosAzureResourceGroup:
             oauth_enabled -> oauthEnabled
             vm_diagnostics_enabled -> enableVMDiagnostics
         """
-        assert master_prefix != agent_prefix, 'Master and agents must have unique prefixs'
+        assert (
+            master_prefix != agent_prefix
+        ), "Master and agents must have unique prefixs"
         validate_hostname_prefix(master_prefix)
         validate_hostname_prefix(agent_prefix)
 
         parameters = {
-            'sshRSAPublicKey': public_key,
-            'masterEndpointDNSNamePrefix': master_prefix,
-            'agentEndpointDNSNamePrefix': agent_prefix,
-            'linuxAdminUsername': admin_name,
-            'agentVMSize': vm_size,
-            'agentCount': agent_count,
-            'nameSuffix': name_suffix,
-            'oauthEnabled': oauth_enabled,
-            'enableVMDiagnostics': vm_diagnostics_enabled}
-        azure_wrapper.deploy_template_to_new_resource_group(template_url, group_name, parameters)
+            "sshRSAPublicKey": public_key,
+            "masterEndpointDNSNamePrefix": master_prefix,
+            "agentEndpointDNSNamePrefix": agent_prefix,
+            "linuxAdminUsername": admin_name,
+            "agentVMSize": vm_size,
+            "agentCount": agent_count,
+            "nameSuffix": name_suffix,
+            "oauthEnabled": oauth_enabled,
+            "enableVMDiagnostics": vm_diagnostics_enabled,
+        }
+        azure_wrapper.deploy_template_to_new_resource_group(
+            template_url, group_name, parameters
+        )
         return cls(group_name, azure_wrapper)
 
     def get_deployment_state(self):
         return self.azure_wrapper.rmc.deployments.get(
-            self.group_name, DEPLOYMENT_NAME.format(self.group_name)).properties.provisioning_state
+            self.group_name, DEPLOYMENT_NAME.format(self.group_name)
+        ).properties.provisioning_state
 
     def wait_for_deployment(self, timeout=60 * 60):
         """
@@ -222,105 +275,134 @@ class DcosAzureResourceGroup:
         once all operations are complete, if there any failures, those will be
         printed to the log stream
         """
-        log.info('Waiting for deployment to finish')
+        log.info("Waiting for deployment to finish")
 
         def azure_failure_report():
             deploy_ops = self.azure_wrapper.rmc.deployment_operations.list(
-                    self.group_name, DEPLOYMENT_NAME.format(self.group_name))
-            failures = [(op.properties.status_code, op.properties.status_message) for op
-                        in deploy_ops if op.properties.provisioning_state == 'Failed']
+                self.group_name, DEPLOYMENT_NAME.format(self.group_name)
+            )
+            failures = [
+                (op.properties.status_code, op.properties.status_message)
+                for op in deploy_ops
+                if op.properties.provisioning_state == "Failed"
+            ]
             for failure in failures:
-                log.error('Deployment operation failed! {}: {}'.format(*failure))
+                log.error("Deployment operation failed! {}: {}".format(*failure))
 
         @retrying.retry(
-            wait_fixed=60 * 1000, stop_max_delay=timeout * 1000,
+            wait_fixed=60 * 1000,
+            stop_max_delay=timeout * 1000,
             retry_on_result=lambda res: res is False,
-            retry_on_exception=lambda ex: isinstance(ex, CloudError))
+            retry_on_exception=lambda ex: isinstance(ex, CloudError),
+        )
         def check_deployment_operations():
             deploy_state = self.get_deployment_state()
 
-            if deploy_state == 'Succeeded':
+            if deploy_state == "Succeeded":
                 return True
 
-            elif deploy_state == 'Failed':
-                log.info('Deployment failed. Checking deployment operations.')
+            elif deploy_state == "Failed":
+                log.info("Deployment failed. Checking deployment operations.")
                 azure_failure_report()
-                raise DeploymentError('Azure Deployment Failed!')
+                raise DeploymentError("Azure Deployment Failed!")
 
             else:
-                log.info('Waiting for deployment. Current state: {}. It should either be Succeeded/Failed.'.format(
-                        deploy_state))
+                log.info(
+                    "Waiting for deployment. Current state: {}. It should either be Succeeded/Failed.".format(
+                        deploy_state
+                    )
+                )
 
                 return False
 
         try:
             check_deployment_operations()
         except retrying.RetryError:
-            log.info('Deployment failed. Checking deployment operations.')
+            log.info("Deployment failed. Checking deployment operations.")
             azure_failure_report()
             raise DeploymentError("Azure Deployment Failed!")
 
     def list_resources(self, filter_string):
         yield from self.azure_wrapper.rmc.resource_groups.list_resources(
-            self.group_name, filter=(filter_string))
+            self.group_name, filter=(filter_string)
+        )
 
     def get_scale_set_nics(self, name_substring=None):
-        for resource in self.list_resources("resourceType eq 'Microsoft.Compute/virtualMachineScaleSets'"):
+        for resource in self.list_resources(
+            "resourceType eq 'Microsoft.Compute/virtualMachineScaleSets'"
+        ):
             if name_substring and name_substring not in resource.name:
                 continue
             yield from self.azure_wrapper.nmc.network_interfaces.list_virtual_machine_scale_set_network_interfaces(
-                self.group_name, resource.name)
+                self.group_name, resource.name
+            )
 
     def get_public_ip_address(self, name_substring=None):
-        for resource in self.list_resources("resourceType eq 'Microsoft.Network/publicIPAddresses'"):
+        for resource in self.list_resources(
+            "resourceType eq 'Microsoft.Network/publicIPAddresses'"
+        ):
             if name_substring and name_substring not in resource.name:
                 continue
-            return self.azure_wrapper.nmc.public_ip_addresses.get(self.group_name, resource.name)
+            return self.azure_wrapper.nmc.public_ip_addresses.get(
+                self.group_name, resource.name
+            )
 
     @property
     def public_agent_lb_fqdn(self):
-        return self.get_public_ip_address('agent-ip').dns_settings.fqdn
+        return self.get_public_ip_address("agent-ip").dns_settings.fqdn
 
     @property
     def public_master_lb_fqdn(self):
-        return self.get_public_ip_address('master-ip').dns_settings.fqdn
+        return self.get_public_ip_address("master-ip").dns_settings.fqdn
 
     @property
     def master_nics(self):
-        """ The only instances of networkInterface Resources are for masters
-        """
-        for resource in self.list_resources("resourceType eq 'Microsoft.Network/networkInterfaces'"):
-            assert 'master' in resource.name, 'Expected to only find master NICs, not: {}'.format(resource.name)
-            yield self.azure_wrapper.nmc.network_interfaces.get(self.group_name, resource.name)
+        """The only instances of networkInterface Resources are for masters"""
+        for resource in self.list_resources(
+            "resourceType eq 'Microsoft.Network/networkInterfaces'"
+        ):
+            assert (
+                "master" in resource.name
+            ), "Expected to only find master NICs, not: {}".format(resource.name)
+            yield self.azure_wrapper.nmc.network_interfaces.get(
+                self.group_name, resource.name
+            )
 
     def get_master_ips(self):
-        """ Traffic from abroad is routed to a master wth the public master
+        """Traffic from abroad is routed to a master wth the public master
         loadbalancer FQDN and the VM index plus 2200 (so the first master will be at 2200)
         """
         public_lb_ip = self.public_master_lb_fqdn
-        return [Host(nic_to_host(nic).private_ip, '{}:{}'.format(public_lb_ip, 2200 + int(nic.name[-1])))
-                for nic in self.master_nics]
+        return [
+            Host(
+                nic_to_host(nic).private_ip,
+                "{}:{}".format(public_lb_ip, 2200 + int(nic.name[-1])),
+            )
+            for nic in self.master_nics
+        ]
 
     def get_private_agent_ips(self):
-        return [nic_to_host(nic) for nic in self.get_scale_set_nics('private')]
+        return [nic_to_host(nic) for nic in self.get_scale_set_nics("private")]
 
     def get_public_agent_ips(self):
-        """ public traffic is routed to public agents via a specific load balancer """
+        """public traffic is routed to public agents via a specific load balancer"""
         public_lb_ip = self.public_agent_lb_fqdn
-        return [Host(nic_to_host(nic).private_ip, public_lb_ip)
-                for nic in self.get_scale_set_nics('public')]
+        return [
+            Host(nic_to_host(nic).private_ip, public_lb_ip)
+            for nic in self.get_scale_set_nics("public")
+        ]
 
     def update_tags(self, new_tags: dict):
         rg = self.azure_wrapper.rmc.resource_groups.get(self.group_name)
         if rg.tags is None:
             rg.tags = dict()
         rg.tags.update(new_tags)
-        self.azure_wrapper.rmc.resource_groups.patch(rg.name, {
-            'tags': rg.tags,
-            'location': rg.location}, raw=True)
+        self.azure_wrapper.rmc.resource_groups.patch(
+            rg.name, {"tags": rg.tags, "location": rg.location}, raw=True
+        )
 
     def delete(self):
-        log.info('Triggering delete')
+        log.info("Triggering delete")
         self.azure_wrapper.rmc.resource_groups.delete(self.group_name, raw=True)
 
     def __enter__(self):
@@ -334,10 +416,14 @@ class HybridDcosAzureResourceGroup(DcosAzureResourceGroup):
     @property
     def master_nics(self):
         master_nics = []
-        for resource in self.list_resources("resourceType eq 'Microsoft.Network/networkInterfaces'"):
-            if 'master' in resource.name:
+        for resource in self.list_resources(
+            "resourceType eq 'Microsoft.Network/networkInterfaces'"
+        ):
+            if "master" in resource.name:
                 master_nics.append(resource.name)
-        assert len(master_nics) > 0, 'Cannot find any master NICs into resource group {}'.format(self.group_name)
+        assert (
+            len(master_nics) > 0
+        ), "Cannot find any master NICs into resource group {}".format(self.group_name)
         for name in master_nics:
             yield self.azure_wrapper.nmc.network_interfaces.get(self.group_name, name)
 
@@ -346,25 +432,29 @@ class HybridDcosAzureResourceGroup(DcosAzureResourceGroup):
         return [nic_to_host(nic, public_lb_ip) for nic in self.master_nics]
 
     def get_linux_private_agent_ips(self):
-        return [nic_to_host(nic) for nic in self.get_scale_set_nics('linpri')]
+        return [nic_to_host(nic) for nic in self.get_scale_set_nics("linpri")]
 
     def get_linux_public_agent_ips(self):
-        return [nic_to_host(nic, self.linux_public_agent_lb_fqdn)
-                for nic in self.get_scale_set_nics('linpub')]
+        return [
+            nic_to_host(nic, self.linux_public_agent_lb_fqdn)
+            for nic in self.get_scale_set_nics("linpub")
+        ]
 
     def get_windows_public_agent_ips(self):
         # this VMSS name is derived from this being the 0-th element in the VMSS list
-        return [nic_to_host(nic, self.windows_public_agent_lb_fqdn)
-                for nic in self.get_scale_set_nics('900-vmss')]
+        return [
+            nic_to_host(nic, self.windows_public_agent_lb_fqdn)
+            for nic in self.get_scale_set_nics("900-vmss")
+        ]
 
     def get_windows_private_agent_ips(self):
         # this VMSS name is derived from this being the 1-th element in the VMSS list
-        return [nic_to_host(nic) for nic in self.get_scale_set_nics('901-vmss')]
+        return [nic_to_host(nic) for nic in self.get_scale_set_nics("901-vmss")]
 
     @property
     def linux_public_agent_lb_fqdn(self):
-        return self.get_public_ip_address('agent-ip-linpub').dns_settings.fqdn
+        return self.get_public_ip_address("agent-ip-linpub").dns_settings.fqdn
 
     @property
     def windows_public_agent_lb_fqdn(self):
-        return self.get_public_ip_address('agent-ip-wpub').dns_settings.fqdn
+        return self.get_public_ip_address("agent-ip-wpub").dns_settings.fqdn

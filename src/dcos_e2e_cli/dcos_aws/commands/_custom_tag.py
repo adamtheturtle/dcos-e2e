@@ -21,12 +21,12 @@ def _validate_tags(
 
     tags = {}  # type: Dict[str, str]
     for tag_definition in value:
-        parts = tag_definition.split(':')
+        parts = tag_definition.split(":")
 
         if len(parts) != 2:
             message = (
                 '"{tag_definition}" is not a valid tag. '
-                'Please follow this syntax: <TAG_KEY>:<TAG_VALUE>.'
+                "Please follow this syntax: <TAG_KEY>:<TAG_VALUE>."
             ).format(tag_definition=tag_definition)
             raise click.BadParameter(message=message)
 
@@ -46,13 +46,12 @@ def custom_tag_option(command: Callable[..., None]) -> Callable[..., None]:
     Option to choose the DC/OS variant for installation.
     """
     function = click.option(
-        '--custom-tag',
+        "--custom-tag",
         type=str,
         callback=_validate_tags,
-        help=(
-            'Add tags to EC2 instances in the format '
-            '"<TAG_KEY>:<TAG_VALUE>".'
-        ),
+        help=("Add tags to EC2 instances in the format " '"<TAG_KEY>:<TAG_VALUE>".'),
         multiple=True,
-    )(command)  # type: Callable[..., None]
+    )(
+        command
+    )  # type: Callable[..., None]
     return function

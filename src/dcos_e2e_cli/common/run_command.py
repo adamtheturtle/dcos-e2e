@@ -44,10 +44,10 @@ def run_command(
     env = {
         # LINES and COLUMNS are needed if using the ``DOCKER_EXEC`` transport.
         # See https://github.com/moby/moby/issues/35407.
-        'COLUMNS': str(columns),
-        'LINES': str(rows),
-        'DCOS_LOGIN_UNAME': dcos_login_uname,
-        'DCOS_LOGIN_PW': dcos_login_pw,
+        "COLUMNS": str(columns),
+        "LINES": str(rows),
+        "DCOS_LOGIN_UNAME": dcos_login_uname,
+        "DCOS_LOGIN_PW": dcos_login_pw,
         **env,
     }
 

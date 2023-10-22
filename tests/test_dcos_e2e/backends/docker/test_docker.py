@@ -34,20 +34,20 @@ def _wait_for_docker(node: Node) -> None:
     Retry for up to one minute (arbitrary) until Docker is running on the given
     node.
     """
-    node.run(args=['docker', 'info'])
+    node.run(args=["docker", "info"])
 
 
 def _get_container_from_node(node: Node) -> docker.models.containers.Container:
     """
     Return the container which represents the given ``node``.
     """
-    client = docker.from_env(version='auto')
+    client = docker.from_env(version="auto")
     containers = client.containers.list()
     matching_containers = []
     for container in containers:
-        networks = container.attrs['NetworkSettings']['Networks']
+        networks = container.attrs["NetworkSettings"]["Networks"]
         for net in networks:
-            if networks[net]['IPAddress'] == str(node.public_ip_address):
+            if networks[net]["IPAddress"] == str(node.public_ip_address):
                 matching_containers.append(container)
 
     assert len(matching_containers) == 1
@@ -63,42 +63,42 @@ class TestDockerBackend:
         """
         It is possible to mount local files to master nodes.
         """
-        local_all_file = tmp_path / 'all_file.txt'
-        local_all_file.write_text('')
-        local_master_file = tmp_path / 'master_file.txt'
-        local_master_file.write_text('')
-        local_agent_file = tmp_path / 'agent_file.txt'
-        local_agent_file.write_text('')
-        local_public_agent_file = tmp_path / 'public_agent_file.txt'
-        local_public_agent_file.write_text('')
+        local_all_file = tmp_path / "all_file.txt"
+        local_all_file.write_text("")
+        local_master_file = tmp_path / "master_file.txt"
+        local_master_file.write_text("")
+        local_agent_file = tmp_path / "agent_file.txt"
+        local_agent_file.write_text("")
+        local_public_agent_file = tmp_path / "public_agent_file.txt"
+        local_public_agent_file.write_text("")
 
-        master_path = Path('/etc/on_master_nodes.txt')
-        agent_path = Path('/etc/on_agent_nodes.txt')
-        public_agent_path = Path('/etc/on_public_agent_nodes.txt')
-        all_path = Path('/etc/on_all_nodes.txt')
+        master_path = Path("/etc/on_master_nodes.txt")
+        agent_path = Path("/etc/on_agent_nodes.txt")
+        public_agent_path = Path("/etc/on_public_agent_nodes.txt")
+        all_path = Path("/etc/on_all_nodes.txt")
 
         custom_container_mount = Mount(
             source=str(local_all_file),
             target=str(all_path),
-            type='bind',
+            type="bind",
         )
 
         custom_master_mount = Mount(
             source=str(local_master_file),
             target=str(master_path),
-            type='bind',
+            type="bind",
         )
 
         custom_agent_mount = Mount(
             source=str(local_agent_file),
             target=str(agent_path),
-            type='bind',
+            type="bind",
         )
 
         custom_public_agent_mount = Mount(
             source=str(local_public_agent_file),
             target=str(public_agent_path),
-            type='bind',
+            type="bind",
         )
 
         backend = Docker(
@@ -129,7 +129,7 @@ class TestDockerBackend:
                 for node in nodes:
                     content = str(uuid.uuid4())
                     local_file.write_text(content)
-                    args = ['cat', str(path)]
+                    args = ["cat", str(path)]
                     result = node.run(args=args)
                     assert result.stdout.decode() == content
 
@@ -161,13 +161,13 @@ class TestDockerVersion:
         Given a `Node`, return the `DockerVersion` on that node.
         """
         _wait_for_docker(node=node)
-        args = ['docker', 'version', '--format', '{{.Server.Version}}']
+        args = ["docker", "version", "--format", "{{.Server.Version}}"]
         result = node.run(args)
         docker_versions = {
-            '1.11.2': DockerVersion.v1_11_2,
-            '1.13.1': DockerVersion.v1_13_1,
-            '17.12.1-ce': DockerVersion.v17_12_1_ce,
-            '18.06.3-ce': DockerVersion.v18_06_3_ce,
+            "1.11.2": DockerVersion.v1_11_2,
+            "1.13.1": DockerVersion.v1_13_1,
+            "17.12.1-ce": DockerVersion.v17_12_1_ce,
+            "18.06.3-ce": DockerVersion.v18_06_3_ce,
         }
 
         return docker_versions[result.stdout.decode().strip()]
@@ -182,12 +182,12 @@ class TestDockerVersion:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             docker_version = self._get_docker_version(node=master)
 
         assert docker_version == DockerVersion.v18_06_3_ce
 
-    @pytest.mark.parametrize('docker_version', list(DockerVersion))
+    @pytest.mark.parametrize("docker_version", list(DockerVersion))
     def test_custom_version(self, docker_version: DockerVersion) -> None:
         """
         It is possible to set a custom version of Docker.
@@ -212,7 +212,7 @@ class TestDockerVersion:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             node_docker_version = self._get_docker_version(node=master)
 
         assert docker_version == node_docker_version
@@ -224,9 +224,9 @@ class TestDockerStorageDriver:
     """
 
     DOCKER_STORAGE_DRIVERS = {
-        'aufs': DockerStorageDriver.AUFS,
-        'overlay': DockerStorageDriver.OVERLAY,
-        'overlay2': DockerStorageDriver.OVERLAY_2,
+        "aufs": DockerStorageDriver.AUFS,
+        "overlay": DockerStorageDriver.OVERLAY,
+        "overlay2": DockerStorageDriver.OVERLAY_2,
     }
 
     @property
@@ -234,7 +234,7 @@ class TestDockerStorageDriver:
         """
         Return the endpoint used when getting Docker information.
         """
-        client = docker.from_env(version='auto')
+        client = docker.from_env(version="auto")
 
         try:
             with Mocker() as mock:
@@ -253,18 +253,18 @@ class TestDockerStorageDriver:
         Given a `Node`, return the `DockerStorageDriver` on that node.
         """
         _wait_for_docker(node=node)
-        result = node.run(args=['docker', 'info', '--format', '{{.Driver}}'])
+        result = node.run(args=["docker", "info", "--format", "{{.Driver}}"])
 
         return self.DOCKER_STORAGE_DRIVERS[result.stdout.decode().strip()]
 
-    @pytest.mark.parametrize('host_driver', DOCKER_STORAGE_DRIVERS.keys())
+    @pytest.mark.parametrize("host_driver", DOCKER_STORAGE_DRIVERS.keys())
     def test_default(self, host_driver: str) -> None:
         """
         By default, the Docker storage driver is the same as the host's
         storage driver, if that driver is supported.
         """
-        client = docker.from_env(version='auto')
-        info = {**client.info(), **{'Driver': host_driver}}
+        client = docker.from_env(version="auto")
+        info = {**client.info(), **{"Driver": host_driver}}
 
         with Mocker(real_http=True) as mock:
             mock.get(url=self._docker_info_endpoint, json=info)
@@ -277,8 +277,8 @@ class TestDockerStorageDriver:
         """
         If the host's storage driver is not supported, `aufs` is used.
         """
-        client = docker.from_env(version='auto')
-        info = {**client.info(), **{'Driver': 'not_supported'}}
+        client = docker.from_env(version="auto")
+        info = {**client.info(), **{"Driver": "not_supported"}}
 
         with Mocker(real_http=True) as mock:
             mock.get(url=self._docker_info_endpoint, json=info)
@@ -292,13 +292,13 @@ class TestDockerStorageDriver:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             node_driver = self._get_storage_driver(node=master)
 
         assert node_driver == DockerStorageDriver.AUFS
 
-    @pytest.mark.parametrize('host_driver', DOCKER_STORAGE_DRIVERS.keys())
-    @pytest.mark.parametrize('custom_driver', list(DockerStorageDriver))
+    @pytest.mark.parametrize("host_driver", DOCKER_STORAGE_DRIVERS.keys())
+    @pytest.mark.parametrize("custom_driver", list(DockerStorageDriver))
     def test_custom(
         self,
         host_driver: str,
@@ -307,8 +307,8 @@ class TestDockerStorageDriver:
         """
         A custom storage driver can be used.
         """
-        client = docker.from_env(version='auto')
-        info = {**client.info(), **{'Driver': host_driver}}
+        client = docker.from_env(version="auto")
+        info = {**client.info(), **{"Driver": host_driver}}
 
         with Mocker(real_http=True) as mock:
             mock.get(url=self._docker_info_endpoint, json=info)
@@ -400,20 +400,20 @@ class TestNetworks:
         """
         Return a Docker network.
         """
-        client = docker.from_env(version='auto')
+        client = docker.from_env(version="auto")
         ipam_pool = docker.types.IPAMPool(
-            subnet='172.28.0.0/16',
-            iprange='172.28.0.0/24',
-            gateway='172.28.0.254',
+            subnet="172.28.0.0/16",
+            iprange="172.28.0.0/24",
+            gateway="172.28.0.254",
         )
         # We use the default container prefix so that the
         # ``minidcos docker clean`` command cleans this up.
         prefix = Docker().container_name_prefix
         random = uuid.uuid4()
-        name = '{prefix}-network-{random}'.format(prefix=prefix, random=random)
+        name = "{prefix}-network-{random}".format(prefix=prefix, random=random)
         network = client.networks.create(
             name=name,
-            driver='bridge',
+            driver="bridge",
             ipam=docker.types.IPAMConfig(pool_configs=[ipam_pool]),
             attachable=False,
         )
@@ -441,11 +441,11 @@ class TestNetworks:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             container = _get_container_from_node(node=master)
-            networks = container.attrs['NetworkSettings']['Networks']
-            assert networks.keys() == set(['bridge', docker_network.name])
-            custom_network_ip = networks[docker_network.name]['IPAddress']
+            networks = container.attrs["NetworkSettings"]["Networks"]
+            assert networks.keys() == set(["bridge", docker_network.name])
+            custom_network_ip = networks[docker_network.name]["IPAddress"]
             assert custom_network_ip == str(master.public_ip_address)
             assert custom_network_ip == str(master.private_ip_address)
 
@@ -466,19 +466,19 @@ class TestNetworks:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             content = str(uuid.uuid4())
-            local_file = tmp_path / 'example_file.txt'
+            local_file = tmp_path / "example_file.txt"
             local_file.write_text(content)
             random = uuid.uuid4().hex
-            master_destination_dir = '/etc/{random}'.format(random=random)
-            master_destination_path = Path(master_destination_dir) / 'file.txt'
+            master_destination_dir = "/etc/{random}".format(random=random)
+            master_destination_path = Path(master_destination_dir) / "file.txt"
             master.send_file(
                 local_path=local_file,
                 remote_path=master_destination_path,
                 transport=Transport.DOCKER_EXEC,
             )
-            args = ['cat', str(master_destination_path)]
+            args = ["cat", str(master_destination_path)]
             result = master.run(args=args, transport=Transport.DOCKER_EXEC)
             assert result.stdout.decode() == content
 
@@ -492,11 +492,11 @@ class TestNetworks:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             container = _get_container_from_node(node=master)
-            networks = container.attrs['NetworkSettings']['Networks']
-            assert networks.keys() == set(['bridge'])
-            bridge_ip_address = networks['bridge']['IPAddress']
+            networks = container.attrs["NetworkSettings"]["Networks"]
+            assert networks.keys() == set(["bridge"])
+            bridge_ip_address = networks["bridge"]["IPAddress"]
             assert bridge_ip_address == str(master.public_ip_address)
             assert bridge_ip_address == str(master.private_ip_address)
 
@@ -505,18 +505,18 @@ class TestNetworks:
         If the bridge network is given, the only network a container is in
         is the Docker default bridge network.
         """
-        client = docker.from_env(version='auto')
-        network = client.networks.get(network_id='bridge')
+        client = docker.from_env(version="auto")
+        network = client.networks.get(network_id="bridge")
         with Cluster(
             cluster_backend=Docker(network=network),
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             container = _get_container_from_node(node=master)
-            networks = container.attrs['NetworkSettings']['Networks']
-            assert networks.keys() == set(['bridge'])
-            bridge_ip_address = networks['bridge']['IPAddress']
+            networks = container.attrs["NetworkSettings"]["Networks"]
+            assert networks.keys() == set(["bridge"])
+            bridge_ip_address = networks["bridge"]["IPAddress"]
             assert bridge_ip_address == str(master.public_ip_address)
             assert bridge_ip_address == str(master.private_ip_address)
 
@@ -532,7 +532,7 @@ class TestOneMasterHostPortMap:
         """
 
         with Cluster(
-            cluster_backend=Docker(one_master_host_port_map={'80/tcp': 8000}),
+            cluster_backend=Docker(one_master_host_port_map={"80/tcp": 8000}),
             masters=3,
             agents=0,
             public_agents=0,
@@ -542,7 +542,7 @@ class TestOneMasterHostPortMap:
             ]
 
             masters_ports_settings = [
-                container.attrs['HostConfig']['PortBindings']
+                container.attrs["HostConfig"]["PortBindings"]
                 for container in masters_containers
             ]
 
@@ -551,9 +551,11 @@ class TestOneMasterHostPortMap:
 
             [master_port_settings] = masters_ports_settings
             expected_master_port_settings = {
-                '80/tcp': [{
-                    'HostIp': '',
-                    'HostPort': '8000',
-                }],
+                "80/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "8000",
+                    }
+                ],
             }
             assert master_port_settings == expected_master_port_settings

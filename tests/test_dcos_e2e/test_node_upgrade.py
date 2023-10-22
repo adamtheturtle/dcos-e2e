@@ -39,7 +39,7 @@ class TestNodeUpgradeFromPath:
             ):
                 for node in nodes:
                     build = node.dcos_build_info()
-                    assert build.version.startswith('2.0')
+                    assert build.version.startswith("2.0")
                     assert build.variant == DCOSVariant.OSS
                     node.upgrade_dcos_from_path(
                         dcos_installer=oss_2_1_installer,
@@ -56,5 +56,5 @@ class TestNodeUpgradeFromPath:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.1')
+                assert build.version.startswith("2.1")
                 assert build.variant == DCOSVariant.OSS

@@ -26,7 +26,7 @@ from .commands.wait import wait
 from .commands.web import web
 
 
-@click.group(name='docker')
+@click.group(name="docker")
 def dcos_docker() -> None:
     """
     Manage DC/OS clusters on Docker.

@@ -43,8 +43,8 @@ def _destroy_cluster(
         cluster_containers.destroy()
 
 
-@click.command('destroy-list')
-@click.argument('cluster_ids', nargs=-1, type=str)
+@click.command("destroy-list")
+@click.argument("cluster_ids", nargs=-1, type=str)
 @node_transport_option
 @enable_spinner_option
 def destroy_list(
@@ -74,7 +74,7 @@ def destroy_list(
         click.echo(cluster_id)
 
 
-@click.command('destroy')
+@click.command("destroy")
 @existing_cluster_id_option
 @node_transport_option
 @enable_spinner_option

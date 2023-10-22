@@ -53,7 +53,7 @@ from ._options import (
 from .doctor import doctor
 
 
-@click.command('provision')
+@click.command("provision")
 @custom_tag_option
 @masters_option
 @agents_option
@@ -90,17 +90,17 @@ def provision(
         new_cluster_id=cluster_id,
         existing_cluster_ids=existing_cluster_ids(aws_region=aws_region),
     )
-    ssh_keypair_dir = workspace_dir / 'ssh'
+    ssh_keypair_dir = workspace_dir / "ssh"
     ssh_keypair_dir.mkdir(parents=True)
-    key_name = 'key-{random}'.format(random=uuid.uuid4().hex)
-    public_key_path = ssh_keypair_dir / 'id_rsa.pub'
-    private_key_path = ssh_keypair_dir / 'id_rsa'
+    key_name = "key-{random}".format(random=uuid.uuid4().hex)
+    public_key_path = ssh_keypair_dir / "id_rsa.pub"
+    private_key_path = ssh_keypair_dir / "id_rsa"
     write_key_pair(
         public_key_path=public_key_path,
         private_key_path=private_key_path,
     )
 
-    ec2 = boto3.resource('ec2', region_name=aws_region)
+    ec2 = boto3.resource("ec2", region_name=aws_region)
     ec2.import_key_pair(
         KeyName=key_name,
         PublicKeyMaterial=public_key_path.read_bytes(),
@@ -111,9 +111,9 @@ def provision(
         doctor_command_name=doctor_command_name,
     )
     ssh_user = {
-        Distribution.CENTOS_7: 'centos',
-        Distribution.UBUNTU_16_04: 'ubuntu',
-        Distribution.RHEL_7: 'ec2-user',
+        Distribution.CENTOS_7: "centos",
+        Distribution.UBUNTU_16_04: "ubuntu",
+        Distribution.RHEL_7: "ec2-user",
     }
 
     distribution = LINUX_DISTRIBUTIONS[linux_distribution]
@@ -156,7 +156,7 @@ def provision(
     nodes = {*cluster.masters, *cluster.agents, *cluster.public_agents}
     for node in nodes:
         if enable_selinux_enforcing:
-            node.run(args=['setenforce', '1'], sudo=True)
+            node.run(args=["setenforce", "1"], sudo=True)
 
     for node in cluster.masters:
         for path_pair in copy_to_master:

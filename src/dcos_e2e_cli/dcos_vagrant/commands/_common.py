@@ -20,8 +20,8 @@ from dcos_e2e.node import Node
 from dcos_e2e_cli._vendor import vertigo_py
 from dcos_e2e_cli.common.base_classes import ClusterRepresentation
 
-CLUSTER_ID_DESCRIPTION_KEY = 'dcos_e2e.cluster_id'
-WORKSPACE_DIR_DESCRIPTION_KEY = 'dcos_e2e.workspace_dir'
+CLUSTER_ID_DESCRIPTION_KEY = "dcos_e2e.cluster_id"
+WORKSPACE_DIR_DESCRIPTION_KEY = "dcos_e2e.workspace_dir"
 
 
 @functools.lru_cache()
@@ -31,8 +31,8 @@ def _description_from_vm_name(vm_name: str) -> str:
     """
     virtualbox_vm = vertigo_py.VM(name=vm_name)  # type: ignore
     info = virtualbox_vm.parse_info()  # type: Dict[str, str]
-    escaped_description = info.get('description', '')
-    description = escaped_description.encode().decode('unicode_escape')
+    escaped_description = info.get("description", "")
+    description = escaped_description.encode().decode("unicode_escape")
     return str(description)
 
 
@@ -47,7 +47,7 @@ def _state_from_vm_name(vm_name: str) -> str:
     """
     virtualbox_vm = vertigo_py.VM(name=vm_name)  # type: ignore
     info = virtualbox_vm.parse_info()  # type: Dict[str, str]
-    return info['VMState']
+    return info["VMState"]
 
 
 # We do not cache the results of this function.
@@ -60,12 +60,12 @@ def vm_names_by_cluster(running_only: bool = False) -> Dict[str, Set[str]]:
     Args:
         running_only: If ``True`` only return running VMs.
     """
-    ls_output = bytes(vertigo_py.ls(option='vms'))  # type: ignore
-    lines = ls_output.decode().strip().split('\n')
+    ls_output = bytes(vertigo_py.ls(option="vms"))  # type: ignore
+    lines = ls_output.decode().strip().split("\n")
     lines = [line for line in lines if line]
     result = defaultdict(set)  # type: Dict[str, Set[str]]
     for line in lines:
-        vm_name_in_quotes, _ = line.rsplit(' ', 1)
+        vm_name_in_quotes, _ = line.rsplit(" ", 1)
         vm_name = vm_name_in_quotes[1:-1]
         state = _state_from_vm_name(vm_name=vm_name)
         description = _description_from_vm_name(vm_name=vm_name)
@@ -73,7 +73,7 @@ def vm_names_by_cluster(running_only: bool = False) -> Dict[str, Set[str]]:
             data = json.loads(s=description)
         except json.decoder.JSONDecodeError:
             continue
-        if running_only and state != 'running':
+        if running_only and state != "running":
             # We do not show e.g. aborted VMs when listing clusters.
             # For example, a VM is aborted when the host is rebooted.
             # This is problematic as we cannot assume that the workspace
@@ -101,20 +101,20 @@ def _ip_from_vm_name(vm_name: str) -> Optional[IPv4Address]:
     """
     Given the name of a VirtualBox VM, return its IP address.
     """
-    property_name = '/VirtualBox/GuestInfo/Net/1/V4/IP'
+    property_name = "/VirtualBox/GuestInfo/Net/1/V4/IP"
     args = [
         vertigo_py.constants.cmd,
-        'guestproperty',
-        'get',
+        "guestproperty",
+        "get",
         vm_name,
         property_name,
     ]
     property_result = vertigo_py.execute(args=args)  # type: ignore
 
     results = yaml.load(property_result, Loader=yaml.FullLoader)
-    if results == 'No value set!':
+    if results == "No value set!":
         return None
-    return IPv4Address(results['Value'])
+    return IPv4Address(results["Value"])
 
 
 def existing_cluster_ids() -> Set[str]:
@@ -161,13 +161,13 @@ class ClusterVMs(ClusterRepresentation):
         ip_address = _ip_from_vm_name(vm_name=vm_name)
 
         if vm_name in self.masters:
-            role = 'master'
+            role = "master"
             role_names = self.masters
         elif vm_name in self.agents:
-            role = 'agent'
+            role = "agent"
             role_names = self.agents
         elif vm_name in self.public_agents:
-            role = 'public_agent'
+            role = "public_agent"
             role_names = self.public_agents
 
         sorted_ips = sorted(
@@ -179,11 +179,11 @@ class ClusterVMs(ClusterRepresentation):
         ssh_key_path = Path(client.keyfile(vm_name=vm_name))
 
         return {
-            'e2e_reference': '{role}_{index}'.format(role=role, index=index),
-            'vm_name': vm_name,
-            'ip_address': str(ip_address),
-            'ssh_user': ssh_user,
-            'ssh_key': str(ssh_key_path),
+            "e2e_reference": "{role}_{index}".format(role=role, index=index),
+            "vm_name": vm_name,
+            "ip_address": str(ip_address),
+            "ssh_user": ssh_user,
+            "ssh_key": str(ssh_key_path),
         }
 
     @functools.lru_cache()
@@ -215,7 +215,7 @@ class ClusterVMs(ClusterRepresentation):
         # different node types.
         # see https://jira.d2iq.com/browse/DCOS_OSS-3851.
         vm_names = self._vm_names()
-        return set(name for name in vm_names if '-master-' in name)
+        return set(name for name in vm_names if "-master-" in name)
 
     @property
     def agents(self) -> Set[str]:
@@ -224,8 +224,9 @@ class ClusterVMs(ClusterRepresentation):
         """
         vm_names = self._vm_names()
         return set(
-            name for name in vm_names
-            if '-agent-' in name and '-public-agent-' not in name
+            name
+            for name in vm_names
+            if "-agent-" in name and "-public-agent-" not in name
         )
 
     @property
@@ -234,7 +235,7 @@ class ClusterVMs(ClusterRepresentation):
         VM names which represent public agent nodes.
         """
         vm_names = self._vm_names()
-        return set(name for name in vm_names if '-public-agent-' in name)
+        return set(name for name in vm_names if "-public-agent-" in name)
 
     @property
     def _workspace_dir(self) -> Path:
@@ -266,18 +267,19 @@ class ClusterVMs(ClusterRepresentation):
         vagrant_box_url = backend.vagrant_box_url
 
         vagrant_env = {
-            'HOME': os.environ['HOME'],
-            'PATH': os.environ['PATH'],
-            'VM_NAMES': ','.join(list(vm_names)),
-            'VM_DESCRIPTION': description,
-            'VM_MEMORY': str(vm_memory_mb),
-            'VAGRANT_BOX_VERSION': vagrant_box_version,
-            'VAGRANT_BOX_URL': vagrant_box_url,
+            "HOME": os.environ["HOME"],
+            "PATH": os.environ["PATH"],
+            "VM_NAMES": ",".join(list(vm_names)),
+            "VM_DESCRIPTION": description,
+            "VM_MEMORY": str(vm_memory_mb),
+            "VAGRANT_BOX_VERSION": vagrant_box_version,
+            "VAGRANT_BOX_URL": vagrant_box_url,
         }
 
         [vagrant_root_parent] = [
-            item for item in self._workspace_dir.iterdir()
-            if item.is_dir() and item.name != 'genconf'
+            item
+            for item in self._workspace_dir.iterdir()
+            if item.is_dir() and item.name != "genconf"
         ]
 
         # We ignore files such as .DS_Store files.
@@ -291,6 +293,7 @@ class ClusterVMs(ClusterRepresentation):
         # We want to avoid that warning for users of other backends who do not
         # have the Vagrant executable.
         import vagrant
+
         vagrant_client = vagrant.Vagrant(
             root=str(vagrant_root),
             env=vagrant_env,

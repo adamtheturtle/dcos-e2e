@@ -20,21 +20,21 @@ from ._options import node_transport_option
 from .doctor import doctor
 
 
-@click.command('wait')
+@click.command("wait")
 @existing_cluster_id_option
 @superuser_username_option
 @superuser_password_option
 @click.option(
-    '--skip-http-checks',
+    "--skip-http-checks",
     is_flag=True,
     help=(
-        'Do not wait for checks which require an HTTP connection to the '
-        'cluster. '
-        'If this flag is used, this command may return before DC/OS is fully '
-        'ready. '
-        'Use this flag in cases where an HTTP connection cannot be made to '
-        'the cluster. '
-        'For example this is useful on macOS without a VPN set up.'
+        "Do not wait for checks which require an HTTP connection to the "
+        "cluster. "
+        "If this flag is used, this command may return before DC/OS is fully "
+        "ready. "
+        "Use this flag in cases where an HTTP connection cannot be made to "
+        "the cluster. "
+        "For example this is useful on macOS without a VPN set up."
     ),
     show_default=True,
 )

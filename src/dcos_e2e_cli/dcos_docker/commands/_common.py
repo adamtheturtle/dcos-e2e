@@ -19,14 +19,14 @@ from dcos_e2e.cluster import Cluster
 from dcos_e2e.node import Node, Role, Transport
 from dcos_e2e_cli.common.base_classes import ClusterRepresentation
 
-CLUSTER_ID_LABEL_KEY = 'dcos_e2e.cluster_id'
-SIDECAR_NAME_LABEL_KEY = 'dcos_e2e.sidecar_name'
-WORKSPACE_DIR_LABEL_KEY = 'dcos_e2e.workspace_dir'
-NODE_TYPE_LABEL_KEY = 'dcos_e2e.node_type'
-NODE_TYPE_MASTER_LABEL_VALUE = 'master'
-NODE_TYPE_AGENT_LABEL_VALUE = 'agent'
-NODE_TYPE_PUBLIC_AGENT_LABEL_VALUE = 'public_agent'
-NODE_TYPE_LOOPBACK_SIDECAR_LABEL_VALUE = 'loopback'
+CLUSTER_ID_LABEL_KEY = "dcos_e2e.cluster_id"
+SIDECAR_NAME_LABEL_KEY = "dcos_e2e.sidecar_name"
+WORKSPACE_DIR_LABEL_KEY = "dcos_e2e.workspace_dir"
+NODE_TYPE_LABEL_KEY = "dcos_e2e.node_type"
+NODE_TYPE_MASTER_LABEL_VALUE = "master"
+NODE_TYPE_AGENT_LABEL_VALUE = "agent"
+NODE_TYPE_PUBLIC_AGENT_LABEL_VALUE = "public_agent"
+NODE_TYPE_LOOPBACK_SIDECAR_LABEL_VALUE = "loopback"
 
 
 @functools.lru_cache()
@@ -35,14 +35,14 @@ def docker_client() -> DockerClient:
     Return a Docker client.
     """
     try:
-        return docker.from_env(version='auto')
+        return docker.from_env(version="auto")
     except docker.errors.DockerException:
         message = (
-            'Error: Cannot connect to Docker.\n'
-            'Make sure that Docker is installed and running, '
+            "Error: Cannot connect to Docker.\n"
+            "Make sure that Docker is installed and running, "
             'and that you can run "docker ps".\n'
             'If "sudo docker ps" works, try following the instructions at '
-            'https://docs.docker.com/install/linux/linux-postinstall/.'
+            "https://docs.docker.com/install/linux/linux-postinstall/."
         )
         click.echo(message, err=True)
         sys.exit(1)
@@ -53,11 +53,9 @@ def existing_cluster_ids() -> Set[str]:
     Return the IDs of existing clusters.
     """
     client = docker_client()
-    filters = {'label': CLUSTER_ID_LABEL_KEY}
+    filters = {"label": CLUSTER_ID_LABEL_KEY}
     containers = client.containers.list(filters=filters)
-    return set(
-        container.labels[CLUSTER_ID_LABEL_KEY] for container in containers
-    )
+    return set(container.labels[CLUSTER_ID_LABEL_KEY] for container in containers)
 
 
 class ClusterContainers(ClusterRepresentation):
@@ -71,7 +69,7 @@ class ClusterContainers(ClusterRepresentation):
             cluster_id: The ID of the cluster.
             transport: The transport to use for communication with nodes.
         """
-        self._cluster_id_label = CLUSTER_ID_LABEL_KEY + '=' + cluster_id
+        self._cluster_id_label = CLUSTER_ID_LABEL_KEY + "=" + cluster_id
         self._transport = transport
 
     @functools.lru_cache()
@@ -86,9 +84,9 @@ class ClusterContainers(ClusterRepresentation):
         }
         client = docker_client()
         filters = {
-            'label': [
+            "label": [
                 self._cluster_id_label,
-                '{key}={value}'.format(
+                "{key}={value}".format(
                     key=NODE_TYPE_LABEL_KEY,
                     value=node_types[role],
                 ),
@@ -101,11 +99,11 @@ class ClusterContainers(ClusterRepresentation):
         Return the ``Node`` that is represented by a given ``container``.
         """
         container = node_representation
-        networks = container.attrs['NetworkSettings']['Networks']
-        network_name = 'bridge'
+        networks = container.attrs["NetworkSettings"]["Networks"]
+        network_name = "bridge"
         if len(networks) != 1:
-            [network_name] = list(networks.keys() - set(['bridge']))
-        address = IPv4Address(networks[network_name]['IPAddress'])
+            [network_name] = list(networks.keys() - set(["bridge"]))
+        address = IPv4Address(networks[network_name]["IPAddress"])
         return Node(
             public_ip_address=address,
             private_ip_address=address,
@@ -120,7 +118,7 @@ class ClusterContainers(ClusterRepresentation):
         """
         container = node_representation
         role = container.labels[NODE_TYPE_LABEL_KEY]
-        container_ip = container.attrs['NetworkSettings']['IPAddress']
+        container_ip = container.attrs["NetworkSettings"]["IPAddress"]
 
         containers = {
             NODE_TYPE_MASTER_LABEL_VALUE: self.masters,
@@ -129,18 +127,18 @@ class ClusterContainers(ClusterRepresentation):
         }[role]
 
         sorted_ips = sorted(
-            [ctr.attrs['NetworkSettings']['IPAddress'] for ctr in containers],
+            [ctr.attrs["NetworkSettings"]["IPAddress"] for ctr in containers],
         )
 
         index = sorted_ips.index(container_ip)
 
         return {
-            'e2e_reference': '{role}_{index}'.format(role=role, index=index),
-            'docker_container_name': container.name,
-            'docker_container_id': container.id,
-            'ip_address': container_ip,
-            'ssh_user': self._ssh_default_user,
-            'ssh_key': str(self.ssh_key_path),
+            "e2e_reference": "{role}_{index}".format(role=role, index=index),
+            "docker_container_name": container.name,
+            "docker_container_id": container.id,
+            "ip_address": container_ip,
+            "ssh_user": self._ssh_default_user,
+            "ssh_key": str(self.ssh_key_path),
         }
 
     @property
@@ -149,14 +147,14 @@ class ClusterContainers(ClusterRepresentation):
         A user which can be used to SSH to any node using
         ``self.ssh_key_path``.
         """
-        return 'root'
+        return "root"
 
     @property
     def ssh_key_path(self) -> Path:
         """
         A key which can be used to SSH to any node.
         """
-        return self._workspace_dir / 'ssh' / 'id_rsa'
+        return self._workspace_dir / "ssh" / "id_rsa"
 
     @property
     def masters(self) -> Set[Container]:

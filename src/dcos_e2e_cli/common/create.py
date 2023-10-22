@@ -85,7 +85,7 @@ def create_cluster(
         A new cluster.
     """
     spinner = halo.Halo(enabled=enable_spinner)
-    spinner.start(text='Creating cluster')
+    spinner.start(text="Creating cluster")
     try:
         cluster = Cluster(
             cluster_backend=cluster_backend,
@@ -95,9 +95,9 @@ def create_cluster(
         )
     except CalledProcessError as exc:
         spinner.stop()
-        click.echo('Error creating cluster.', err=True)
-        click.echo(click.style('Full error:', fg='yellow'))
-        click.echo(click.style(textwrap.indent(str(exc), '  '), fg='yellow'))
+        click.echo("Error creating cluster.", err=True)
+        click.echo(click.style("Full error:", fg="yellow"))
+        click.echo(click.style(textwrap.indent(str(exc), "  "), fg="yellow"))
         click.echo(doctor_message, err=True)
 
         sys.exit(exc.returncode)
@@ -123,17 +123,17 @@ def get_config(
         superuser_password = DEFAULT_SUPERUSER_PASSWORD
 
         enterprise_extra_config = {
-            'superuser_username': superuser_username,
-            'superuser_password_hash': sha512_crypt.hash(superuser_password),
-            'fault_domain_enabled': False,
+            "superuser_username": superuser_username,
+            "superuser_password_hash": sha512_crypt.hash(superuser_password),
+            "fault_domain_enabled": False,
         }
         if license_key is not None:
             key_contents = license_key.read_text()
-            enterprise_extra_config['license_key_contents'] = key_contents
+            enterprise_extra_config["license_key_contents"] = key_contents
 
         extra_config = {**enterprise_extra_config, **extra_config}
         if security_mode is not None:
-            extra_config['security'] = security_mode
+            extra_config["security"] = security_mode
 
     dcos_config = {
         **cluster_representation.base_config,

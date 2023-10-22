@@ -34,7 +34,7 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('upgrade')
+@click.command("upgrade")
 @existing_cluster_id_option
 @verbosity_option
 @extra_config_option

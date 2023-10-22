@@ -73,7 +73,7 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('create', help=CREATE_HELP)
+@click.command("create", help=CREATE_HELP)
 @installer_path_argument
 @docker_version_option
 @linux_distribution_option
@@ -143,8 +143,8 @@ def create(
     doctor_message = get_doctor_message(
         doctor_command_name=doctor_command_name,
     )
-    public_key_path = workspace_dir / 'id_rsa.pub'
-    private_key_path = workspace_dir / 'id_rsa'
+    public_key_path = workspace_dir / "id_rsa.pub"
+    private_key_path = workspace_dir / "id_rsa"
     write_key_pair(
         public_key_path=public_key_path,
         private_key_path=private_key_path,
@@ -159,7 +159,7 @@ def create(
     )
 
     # This is useful for some people to identify containers.
-    container_name_prefix = Docker().container_name_prefix + '-' + cluster_id
+    container_name_prefix = Docker().container_name_prefix + "-" + cluster_id
 
     cluster_backend = Docker(
         container_name_prefix=container_name_prefix,

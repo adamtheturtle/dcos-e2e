@@ -32,30 +32,30 @@ class DockerLoopbackVolume:
         Attributes:
             path: The path to the block device inside the container.
         """
-        client = docker.from_env(version='auto')
+        client = docker.from_env(version="auto")
 
         # We use CentOS 7 here, as it provides all the binaries we need
         # and might already be pulled as it is a distribution supported
         # by DC/OS.
         self._container = client.containers.create(
-            name='{prefix}-loopback-sidecar-{random}'.format(
+            name="{prefix}-loopback-sidecar-{random}".format(
                 prefix=Docker().container_name_prefix,
                 random=uuid.uuid4().hex,
             ),
             privileged=True,
             detach=True,
             tty=True,
-            image='centos:7',
+            image="centos:7",
             labels=labels or {},
         )
         self._container.start()
 
         create_loopback_device = [
-            'dd',
-            'if=/dev/zero',
-            'of=volume0',
-            'bs=1M',
-            'count={size}'.format(size=size_megabytes),
+            "dd",
+            "if=/dev/zero",
+            "of=volume0",
+            "bs=1M",
+            "count={size}".format(size=size_megabytes),
         ]
 
         exit_code, output = self._container.exec_run(
@@ -63,21 +63,21 @@ class DockerLoopbackVolume:
         )
         assert exit_code == 0, output.decode()
 
-        setup_loopback_device = 'losetup --find --show /volume0;'
+        setup_loopback_device = "losetup --find --show /volume0;"
 
         exit_code, output = self._container.exec_run(
-            cmd=['/bin/bash', '-c', setup_loopback_device],
+            cmd=["/bin/bash", "-c", setup_loopback_device],
         )
         assert exit_code == 0, output.decode()
 
         self.path = output.decode().rstrip()
 
-        write_device_path = 'echo {path} > loopback_device_path'.format(
+        write_device_path = "echo {path} > loopback_device_path".format(
             path=self.path,
         )
 
         exit_code, output = self._container.exec_run(
-            cmd=['/bin/bash', '-c', write_device_path],
+            cmd=["/bin/bash", "-c", write_device_path],
         )
         assert exit_code == 0, output.decode()
 
@@ -91,19 +91,19 @@ class DockerLoopbackVolume:
             container: The container to destroy.
         """
         exit_code, output = container.exec_run(
-            cmd=['cat', 'loopback_device_path'],
+            cmd=["cat", "loopback_device_path"],
         )
         assert exit_code == 0, output.decode()
 
         path = output.decode().rstrip()
 
-        exit_code, output = container.exec_run(cmd=['losetup', '-d', path])
+        exit_code, output = container.exec_run(cmd=["losetup", "-d", path])
         assert exit_code == 0, output.decode()
 
         container.stop()
         container.remove(v=True)
 
-    def __enter__(self) -> 'DockerLoopbackVolume':
+    def __enter__(self) -> "DockerLoopbackVolume":
         """
         Enter a context manager.
         The context manager receives this ``DockerLoopbackVolume`` instance.

@@ -21,7 +21,7 @@ from .node import Node, Output
 LOGGER = logging.getLogger(__name__)
 
 
-@retry(exceptions=(retrying.RetryError, ))
+@retry(exceptions=(retrying.RetryError,))
 def _test_utils_wait_for_dcos(
     session: Union[DcosApiSession, EnterpriseApiSession],
 ) -> None:
@@ -50,22 +50,22 @@ def _wait_for_node_poststart(masters: Set[Node]) -> None:
     reading the CA certificate used by certain checks.
     """
     for node in masters:
-        log_msg = 'Running a poststart check on `{}`'.format(str(node))
+        log_msg = "Running a poststart check on `{}`".format(str(node))
         LOGGER.debug(log_msg)
         node.run(
             args=[
-                'sudo',
-                '/opt/mesosphere/bin/dcos-check-runner',
-                'check',
-                'node-poststart',
-                '||',
-                'sudo',
-                '/opt/mesosphere/bin/dcos-diagnostics',
-                'check',
-                'node-poststart',
-                '||',
-                '/opt/mesosphere/bin/3dt',
-                '--diag',
+                "sudo",
+                "/opt/mesosphere/bin/dcos-check-runner",
+                "check",
+                "node-poststart",
+                "||",
+                "sudo",
+                "/opt/mesosphere/bin/dcos-diagnostics",
+                "check",
+                "node-poststart",
+                "||",
+                "/opt/mesosphere/bin/3dt",
+                "--diag",
             ],
             # We capture output because else we would see a lot of output
             # in a normal start up, for example during tests.
@@ -116,19 +116,19 @@ def wait_for_dcos_oss(
         if not http_checks:
             return
 
-        email = 'albert@bekstil.net'
-        curl_url = 'http://localhost:8101/acs/api/v1/users/{email}'.format(
+        email = "albert@bekstil.net"
+        curl_url = "http://localhost:8101/acs/api/v1/users/{email}".format(
             email=email,
         )
 
-        delete_user_args = ['curl', '-X', 'DELETE', curl_url]
+        delete_user_args = ["curl", "-X", "DELETE", curl_url]
 
         create_user_args = [
-            '.',
-            '/opt/mesosphere/environment.export',
-            '&&',
-            'python',
-            '/opt/mesosphere/bin/dcos_add_user.py',
+            ".",
+            "/opt/mesosphere/environment.export",
+            "&&",
+            "python",
+            "/opt/mesosphere/bin/dcos_add_user.py",
             email,
         ]
 
@@ -179,7 +179,7 @@ def wait_for_dcos_oss(
         credentials = CI_CREDENTIALS
 
         api_session = DcosApiSession(
-            dcos_url='http://{ip}'.format(ip=any_master.public_ip_address),
+            dcos_url="http://{ip}".format(ip=any_master.public_ip_address),
             masters=[str(n.public_ip_address) for n in masters],
             slaves=[str(n.public_ip_address) for n in agents],
             public_slaves=[str(n.public_ip_address) for n in public_agents],
@@ -267,26 +267,24 @@ def wait_for_dcos_ee(
         # DC/OS checks for every HTTP endpoint exposed by Admin Router.
 
         credentials = {
-            'uid': superuser_username,
-            'password': superuser_password,
+            "uid": superuser_username,
+            "password": superuser_password,
         }
 
         any_master = next(iter(masters))
         config_result = any_master.run(
-            args=['cat', '/opt/mesosphere/etc/bootstrap-config.json'],
+            args=["cat", "/opt/mesosphere/etc/bootstrap-config.json"],
         )
         config = json.loads(config_result.stdout.decode())
-        ssl_enabled = config['ssl_enabled']
+        ssl_enabled = config["ssl_enabled"]
 
-        scheme = 'https://' if ssl_enabled else 'http://'
+        scheme = "https://" if ssl_enabled else "http://"
         dcos_url = scheme + str(any_master.public_ip_address)
         enterprise_session = EnterpriseApiSession(  # type: ignore
             dcos_url=dcos_url,
             masters=[str(n.public_ip_address) for n in masters],
             slaves=[str(n.public_ip_address) for n in agents],
-            public_slaves=[
-                str(n.public_ip_address) for n in public_agents
-            ],
+            public_slaves=[str(n.public_ip_address) for n in public_agents],
             auth_user=DcosUser(credentials=credentials),
         )
 
@@ -295,7 +293,7 @@ def wait_for_dcos_ee(
                 # Avoid hitting a RetryError in the get function.
                 # Waiting a year is considered equivalent to an
                 # infinite timeout.
-                '/ca/dcos-ca.crt',
+                "/ca/dcos-ca.crt",
                 retry_timeout=60 * 60 * 24 * 365,
                 verify=False,
             )

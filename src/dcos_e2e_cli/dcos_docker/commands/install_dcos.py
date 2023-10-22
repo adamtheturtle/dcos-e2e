@@ -36,7 +36,7 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('install')
+@click.command("install")
 @genconf_dir_option
 @installer_path_argument
 @existing_cluster_id_option

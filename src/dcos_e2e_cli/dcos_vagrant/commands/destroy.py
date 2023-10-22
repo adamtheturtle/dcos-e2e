@@ -33,9 +33,9 @@ def destroy_cluster(cluster_id: str, enable_spinner: bool) -> None:
         cluster_vms.destroy()
 
 
-@click.command('destroy-list')
+@click.command("destroy-list")
 @enable_spinner_option
-@click.argument('cluster_ids', nargs=-1, type=str)
+@click.argument("cluster_ids", nargs=-1, type=str)
 def destroy_list(cluster_ids: List[str], enable_spinner: bool) -> None:
     """
     Destroy clusters.
@@ -58,7 +58,7 @@ def destroy_list(cluster_ids: List[str], enable_spinner: bool) -> None:
             continue
 
 
-@click.command('destroy')
+@click.command("destroy")
 @enable_spinner_option
 @existing_cluster_id_option
 def destroy(cluster_id: str, enable_spinner: bool) -> None:

@@ -19,7 +19,7 @@ from .commands.wait import wait
 from .commands.web import web
 
 
-@click.group(name='aws')
+@click.group(name="aws")
 def dcos_aws() -> None:
     """
     Manage DC/OS clusters on AWS.

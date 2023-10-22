@@ -9,11 +9,11 @@ import click
 from dcos_e2e.distributions import Distribution
 
 _LINUX_DISTRIBUTIONS = {
-    'centos-7': Distribution.CENTOS_7,
-    'centos-8': Distribution.CENTOS_8,
-    'coreos': Distribution.COREOS,
-    'flatcar': Distribution.FLATCAR,
-    'ubuntu-16.04': Distribution.UBUNTU_16_04,
+    "centos-7": Distribution.CENTOS_7,
+    "centos-8": Distribution.CENTOS_8,
+    "coreos": Distribution.COREOS,
+    "flatcar": Distribution.FLATCAR,
+    "ubuntu-16.04": Distribution.UBUNTU_16_04,
 }
 
 
@@ -32,17 +32,20 @@ def _get_linux_distribution(
     return _LINUX_DISTRIBUTIONS[value]
 
 
-def linux_distribution_option(command: Callable[..., None],
-                              ) -> Callable[..., None]:
+def linux_distribution_option(
+    command: Callable[..., None],
+) -> Callable[..., None]:
     """
     Option for choosing the Linux distribution to use.
     """
     function = click.option(
-        '--linux-distribution',
+        "--linux-distribution",
         type=click.Choice(sorted(_LINUX_DISTRIBUTIONS.keys())),
-        default='centos-7',
+        default="centos-7",
         show_default=True,
-        help='The Linux distribution to use on the nodes.',
+        help="The Linux distribution to use on the nodes.",
         callback=_get_linux_distribution,
-    )(command)  # type: Callable[..., None]
+    )(
+        command
+    )  # type: Callable[..., None]
     return function

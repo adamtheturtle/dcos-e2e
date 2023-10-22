@@ -8,47 +8,51 @@ import typing
 
 import retrying
 
-from ..dcos_test_utils.helpers import (ApiClientSession,
-                                     RetryCommonHttpErrorsMixin, path_join)
+from ..dcos_test_utils.helpers import (
+    ApiClientSession,
+    RetryCommonHttpErrorsMixin,
+    path_join,
+)
 
-REQUIRED_HEADERS = {'Accept': 'application/json, text/plain, */*'}
-FORCE_PARAMS = {'force': 'true'}
+REQUIRED_HEADERS = {"Accept": "application/json, text/plain, */*"}
+FORCE_PARAMS = {"force": "true"}
 Endpoint = collections.namedtuple("Endpoint", ["host", "port", "ip"])
 log = logging.getLogger(__name__)
 
 
 class Container(enum.Enum):
-    """ Enumerator to capture all Marathon app container options
-    """
-    DOCKER = 'DOCKER'
-    MESOS = 'MESOS'
+    """Enumerator to capture all Marathon app container options"""
+
+    DOCKER = "DOCKER"
+    MESOS = "MESOS"
     NONE = None
 
 
 class Network(enum.Enum):
-    """ Enumerator to capture all Marathon app networking options
-    """
-    HOST = 'HOST'
-    USER = 'USER'
-    BRIDGE = 'BRIDGE'
+    """Enumerator to capture all Marathon app networking options"""
+
+    HOST = "HOST"
+    USER = "USER"
+    BRIDGE = "BRIDGE"
 
 
 class Healthcheck(enum.Enum):
-    """ Enumerator to capture all Marathon app Healthcheck options
-    """
-    HOST = 'HOST'
-    HTTP = 'HTTP'
-    MESOS_HTTP = 'MESOS_HTTP'
+    """Enumerator to capture all Marathon app Healthcheck options"""
+
+    HOST = "HOST"
+    HTTP = "HTTP"
+    MESOS_HTTP = "MESOS_HTTP"
 
 
 class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
-    """ Specialized client for interacting with Marathon (DC/OS Services) functionality
+    """Specialized client for interacting with Marathon (DC/OS Services) functionality
 
     :param default_url: URL of the jobs service to bind to
     :type default_url: helpers.Url
     :param session: option session to bootstrap this session with
     :type session: requests.Session
     """
+
     def __init__(self, default_url, session=None):
         super().__init__(default_url)
         if session is not None:
@@ -56,12 +60,13 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
         self.session.headers.update(REQUIRED_HEADERS)
 
     def check_app_instances(
-            self,
-            app_id: str,
-            app_instances: int,
-            check_health: bool,
-            ignore_failed_tasks: bool) -> bool:
-        """ Check a marathon app ID and return True if healthy
+        self,
+        app_id: str,
+        app_instances: int,
+        check_health: bool,
+        ignore_failed_tasks: bool,
+    ) -> bool:
+        """Check a marathon app ID and return True if healthy
 
         Args:
             app_id: marathon app ID ro be checked
@@ -71,60 +76,65 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
         """
         # Some of the counters need to be explicitly enabled now and/or in
         # future versions of Marathon:
-        req_params = (('embed', 'apps.lastTaskFailure'),
-                      ('embed', 'apps.counts'))
+        req_params = (("embed", "apps.lastTaskFailure"), ("embed", "apps.counts"))
 
-        log.info('Waiting for application to be deployed...')
-        r = self.get(path_join('/v2/apps', app_id), params=req_params)
+        log.info("Waiting for application to be deployed...")
+        r = self.get(path_join("/v2/apps", app_id), params=req_params)
         r.raise_for_status()
 
         data = r.json()
-        log.debug('Current application state data: {}'.format(repr(data)))
+        log.debug("Current application state data: {}".format(repr(data)))
 
-        if 'lastTaskFailure' in data['app']:
-            message = data['app']['lastTaskFailure']['message']
+        if "lastTaskFailure" in data["app"]:
+            message = data["app"]["lastTaskFailure"]["message"]
             if not ignore_failed_tasks:
-                raise AssertionError('Application deployment failed, reason: {}'.format(message))
+                raise AssertionError(
+                    "Application deployment failed, reason: {}".format(message)
+                )
             else:
-                log.warn('Task failure detected: {}'.format(message))
+                log.warn("Task failure detected: {}".format(message))
 
-        check_tasks_running = (data['app']['tasksRunning'] == app_instances)
-        check_tasks_healthy = (not check_health or data['app']['tasksHealthy'] == app_instances)
+        check_tasks_running = data["app"]["tasksRunning"] == app_instances
+        check_tasks_healthy = (
+            not check_health or data["app"]["tasksHealthy"] == app_instances
+        )
 
         if check_tasks_running and check_tasks_healthy:
-            log.info('Application deployed!')
+            log.info("Application deployed!")
             return True
         elif not check_tasks_running:
-            log.debug('Not all instances are running!')
+            log.debug("Not all instances are running!")
             return False
         elif not check_tasks_healthy:
-            log.debug('Not all instances are healthy!')
+            log.debug("Not all instances are healthy!")
             return False
         else:
-            log.debug('Still waiting for application to scale...')
+            log.debug("Still waiting for application to scale...")
             return False
 
     def get_app_service_endpoints(self, app_id: str) -> typing.List[Endpoint]:
-        """ returns endpoint tuples for the given application ID
-        """
-        r = self.get(path_join('/v2/apps', app_id))
+        """returns endpoint tuples for the given application ID"""
+        r = self.get(path_join("/v2/apps", app_id))
         r.raise_for_status()
         data = r.json()
-        res = [Endpoint(t['host'], t['ports'][0], t['ipAddresses'][0]['ipAddress'])
-               if len(t['ports']) != 0
-               else Endpoint(t['host'], 0, t['ipAddresses'][0]['ipAddress'])
-               for t in data['app']['tasks']]
-        log.info('Application deployed, running on {}'.format(res))
+        res = [
+            Endpoint(t["host"], t["ports"][0], t["ipAddresses"][0]["ipAddress"])
+            if len(t["ports"]) != 0
+            else Endpoint(t["host"], 0, t["ipAddresses"][0]["ipAddress"])
+            for t in data["app"]["tasks"]
+        ]
+        log.info("Application deployed, running on {}".format(res))
         return res
 
     def wait_for_app_deployment(
-            self,
-            app_id: str,
-            app_instances: int,
-            check_health: bool,
-            ignore_failed_tasks: bool,
-            timeout: int):
-        """ Retries the check_app_instance function for a limited time
+        self,
+        app_id: str,
+        app_instances: int,
+        check_health: bool,
+        ignore_failed_tasks: bool,
+        timeout: int,
+    ):
+        """Retries the check_app_instance function for a limited time
         Args:
             app_id: ID of the marathon app to check
             app_instances: expected number of instances
@@ -135,14 +145,20 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
 
         @retrying.retry(
             wait_fixed=5000,
-            stop_max_delay=timeout*1000,
+            stop_max_delay=timeout * 1000,
             retry_on_result=lambda res: res is False,
-            retry_on_exception=lambda ex: False)
+            retry_on_exception=lambda ex: False,
+        )
         def wait():
-            return self.check_app_instances(app_id, app_instances, check_health, ignore_failed_tasks)
+            return self.check_app_instances(
+                app_id, app_instances, check_health, ignore_failed_tasks
+            )
+
         wait()
 
-    def deploy_app(self, app_definition, check_health=True, ignore_failed_tasks=False, timeout=180):
+    def deploy_app(
+        self, app_definition, check_health=True, ignore_failed_tasks=False, timeout=180
+    ):
         """Deploy an app to marathon
 
         This function deploys an an application and then waits for marathon to
@@ -163,18 +179,23 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
             applications. I.E:
                 [Endpoint(host='172.17.10.202', port=10464), Endpoint(host='172.17.10.201', port=1630)]
         """
-        r = self.post('/v2/apps', json=app_definition)
-        log.info('Response from marathon: {}'.format(repr(r.json())))
+        r = self.post("/v2/apps", json=app_definition)
+        log.info("Response from marathon: {}".format(repr(r.json())))
         r.raise_for_status()
 
         try:
             return self.wait_for_app_deployment(
-                    app_definition['id'],
-                    app_definition['instances'],
-                    check_health, ignore_failed_tasks, timeout)
+                app_definition["id"],
+                app_definition["instances"],
+                check_health,
+                ignore_failed_tasks,
+                timeout,
+            )
         except retrying.RetryError:
-            raise Exception("Application deployment failed - operation was not "
-                            "completed in {} seconds.".format(timeout))
+            raise Exception(
+                "Application deployment failed - operation was not "
+                "completed in {} seconds.".format(timeout)
+            )
 
     def deploy_pod(self, pod_definition, timeout=180):
         """Deploy a pod to marathon
@@ -191,33 +212,38 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
         Returns:
             Pod data JSON
         """
-        r = self.post('/v2/pods', json=pod_definition)
-        assert r.ok, 'status_code: {} content: {}'.format(r.status_code, r.content)
-        log.info('Response from marathon: {}'.format(repr(r.json())))
+        r = self.post("/v2/pods", json=pod_definition)
+        assert r.ok, "status_code: {} content: {}".format(r.status_code, r.content)
+        log.info("Response from marathon: {}".format(repr(r.json())))
 
-        @retrying.retry(wait_fixed=5000, stop_max_delay=timeout * 1000,
-                        retry_on_result=lambda ret: ret is False,
-                        retry_on_exception=lambda x: False)
+        @retrying.retry(
+            wait_fixed=5000,
+            stop_max_delay=timeout * 1000,
+            retry_on_result=lambda ret: ret is False,
+            retry_on_exception=lambda x: False,
+        )
         def _wait_for_pod_deployment(pod_id):
             # In the context of the `deploy_pod` function, simply waiting for
             # the pod's status to become STABLE is sufficient. In the future,
             # if test pod deployments become more complex, we should switch to
             # using Marathon's event bus and listen for specific events.
             # See DCOS_OSS-1056.
-            r = self.get('/v2/pods' + pod_id + '::status')
+            r = self.get("/v2/pods" + pod_id + "::status")
             r.raise_for_status()
             data = r.json()
-            if 'status' in data and data['status'] == 'STABLE':
+            if "status" in data and data["status"] == "STABLE":
                 # deployment complete
                 return data
-            log.info('Waiting for pod to be deployed %r', data)
+            log.info("Waiting for pod to be deployed %r", data)
             return False
 
         try:
-            return _wait_for_pod_deployment(pod_definition['id'])
+            return _wait_for_pod_deployment(pod_definition["id"])
         except retrying.RetryError as ex:
-            raise Exception("Pod deployment failed - operation was not "
-                            "completed in {} seconds.".format(timeout)) from ex
+            raise Exception(
+                "Pod deployment failed - operation was not "
+                "completed in {} seconds.".format(timeout)
+            ) from ex
 
     def destroy_pod(self, pod_id, timeout=300):
         """Remove a marathon pod
@@ -228,28 +254,34 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
             pod_id: id of the pod to remove
             timeout: seconds to wait for destruction before failing test
         """
-        @retrying.retry(wait_fixed=5000, stop_max_delay=timeout * 1000,
-                        retry_on_result=lambda ret: not ret,
-                        retry_on_exception=lambda x: False)
+
+        @retrying.retry(
+            wait_fixed=5000,
+            stop_max_delay=timeout * 1000,
+            retry_on_result=lambda ret: not ret,
+            retry_on_exception=lambda x: False,
+        )
         def _destroy_pod_complete(deployment_id):
-            r = self.get('/v2/deployments')
-            assert r.ok, 'status_code: {} content: {}'.format(r.status_code, r.content)
+            r = self.get("/v2/deployments")
+            assert r.ok, "status_code: {} content: {}".format(r.status_code, r.content)
 
             for deployment in r.json():
-                if deployment_id == deployment.get('id'):
-                    log.info('Waiting for pod to be destroyed')
+                if deployment_id == deployment.get("id"):
+                    log.info("Waiting for pod to be destroyed")
                     return False
-            log.info('Pod destroyed')
+            log.info("Pod destroyed")
             return True
 
-        r = self.delete('/v2/pods' + pod_id, params=FORCE_PARAMS)
-        assert r.ok, 'status_code: {} content: {}'.format(r.status_code, r.content)
+        r = self.delete("/v2/pods" + pod_id, params=FORCE_PARAMS)
+        assert r.ok, "status_code: {} content: {}".format(r.status_code, r.content)
 
         try:
-            _destroy_pod_complete(r.headers['Marathon-Deployment-Id'])
+            _destroy_pod_complete(r.headers["Marathon-Deployment-Id"])
         except retrying.RetryError as ex:
-            raise Exception("Pod destroy failed - operation was not "
-                            "completed in {} seconds.".format(timeout)) from ex
+            raise Exception(
+                "Pod destroy failed - operation was not "
+                "completed in {} seconds.".format(timeout)
+            ) from ex
 
     def destroy_app(self, app_name, timeout=300):
         """Remove a marathon app
@@ -260,76 +292,85 @@ class Marathon(RetryCommonHttpErrorsMixin, ApiClientSession):
             app_name: name of the application to remove
             timeout: seconds to wait for destruction before failing test
         """
-        @retrying.retry(wait_fixed=5000, stop_max_delay=timeout * 1000,
-                        retry_on_result=lambda ret: not ret,
-                        retry_on_exception=lambda x: False)
+
+        @retrying.retry(
+            wait_fixed=5000,
+            stop_max_delay=timeout * 1000,
+            retry_on_result=lambda ret: not ret,
+            retry_on_exception=lambda x: False,
+        )
         def _destroy_complete(deployment_id):
-            r = self.get('/v2/deployments')
+            r = self.get("/v2/deployments")
             r.raise_for_status()
 
             for deployment in r.json():
-                if deployment_id == deployment.get('id'):
-                    log.info('Waiting for application to be destroyed')
+                if deployment_id == deployment.get("id"):
+                    log.info("Waiting for application to be destroyed")
                     return False
-            log.info('Application destroyed')
+            log.info("Application destroyed")
             return True
 
-        r = self.delete(path_join('/v2/apps', app_name))
+        r = self.delete(path_join("/v2/apps", app_name))
         r.raise_for_status()
 
         try:
-            _destroy_complete(r.json()['deploymentId'])
+            _destroy_complete(r.json()["deploymentId"])
         except retrying.RetryError:
-            raise Exception("Application destroy failed - operation was not "
-                            "completed in {} seconds.".format(timeout))
+            raise Exception(
+                "Application destroy failed - operation was not "
+                "completed in {} seconds.".format(timeout)
+            )
 
     @contextlib.contextmanager
-    def deploy_and_cleanup(self, app_definition, timeout=180, check_health=True, ignore_failed_tasks=True):
-        """ This context manager works just like :func:`Marathon.deploy_app` but will always destroy
+    def deploy_and_cleanup(
+        self, app_definition, timeout=180, check_health=True, ignore_failed_tasks=True
+    ):
+        """This context manager works just like :func:`Marathon.deploy_app` but will always destroy
         the app once the context is left
         """
         try:
             yield self.deploy_app(
-                app_definition, check_health, ignore_failed_tasks, timeout=timeout)
+                app_definition, check_health, ignore_failed_tasks, timeout=timeout
+            )
         finally:
-            self.destroy_app(app_definition['id'], timeout)
+            self.destroy_app(app_definition["id"], timeout)
 
     @contextlib.contextmanager
     def deploy_pod_and_cleanup(self, pod_definition, timeout=180):
-        """ This context manager works just like :func:`Marathon.deploy_pod` but will always destroy
+        """This context manager works just like :func:`Marathon.deploy_pod` but will always destroy
         the app once the context is left
         """
         try:
             yield self.deploy_pod(pod_definition, timeout=timeout)
         finally:
-            self.destroy_pod(pod_definition['id'], timeout)
+            self.destroy_pod(pod_definition["id"], timeout)
 
     def purge(self):
-        """ Force deletes all applications, all pods, and then waits
+        """Force deletes all applications, all pods, and then waits
         indefinitely for any deployments to finish
         """
-        apps_response = self.get('/v2/apps')
+        apps_response = self.get("/v2/apps")
         apps_response.raise_for_status()
-        for app in apps_response.json()['apps']:
-            log.info('Purging application: {}'.format(app['id']))
-            self.delete('/v2/apps' + app['id'], params=FORCE_PARAMS)
-        pods_response = self.get('/v2/pods')
+        for app in apps_response.json()["apps"]:
+            log.info("Purging application: {}".format(app["id"]))
+            self.delete("/v2/apps" + app["id"], params=FORCE_PARAMS)
+        pods_response = self.get("/v2/pods")
         pods_response.raise_for_status()
         for pod in pods_response.json():
-            log.info('Deleting pod: {}'.format(pod['id']))
-            self.delete('/v2/pods' + pod['id'], params=FORCE_PARAMS)
-        log.info('Deleting groups')
-        self.delete('/v2/groups/', params=FORCE_PARAMS)
+            log.info("Deleting pod: {}".format(pod["id"]))
+            self.delete("/v2/pods" + pod["id"], params=FORCE_PARAMS)
+        log.info("Deleting groups")
+        self.delete("/v2/groups/", params=FORCE_PARAMS)
         self.wait_for_deployments_complete()
 
     @retrying.retry(
         wait_fixed=10 * 1000,
         retry_on_result=lambda res: res is False,
-        retry_on_exception=lambda ex: False)
+        retry_on_exception=lambda ex: False,
+    )
     def wait_for_deployments_complete(self):
-        """ This simple helper will block until there are no more deployments in progress
-        """
-        if not self.get('/v2/deployments').json():
+        """This simple helper will block until there are no more deployments in progress"""
+        if not self.get("/v2/deployments").json():
             return True
-        log.info('Deployments in progress, continuing to wait...')
+        log.info("Deployments in progress, continuing to wait...")
         return False

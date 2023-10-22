@@ -36,7 +36,7 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('install')
+@click.command("install")
 @installer_url_argument
 @variant_option
 @wait_for_dcos_option

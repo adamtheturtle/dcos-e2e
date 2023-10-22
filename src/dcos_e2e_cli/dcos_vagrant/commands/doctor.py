@@ -24,14 +24,14 @@ def check_docker() -> CheckLevels:
     Error if Docker is not running.
     """
     try:
-        docker.from_env(version='auto')
+        docker.from_env(version="auto")
     except docker.errors.DockerException:
         message = (
-            'Docker is not running. '
+            "Docker is not running. "
             'Docker is required for the "create" command to determine the '
-            'DC/OS variant of the given DC/OS installer. '
+            "DC/OS variant of the given DC/OS installer. "
             'Use the "--variant" option when using the "create" command or '
-            'install and run Docker.'
+            "install and run Docker."
         )
         warn(message=message)
         return CheckLevels.WARNING
@@ -42,11 +42,11 @@ def check_virtualbox() -> CheckLevels:
     """
     Error if VirtualBox is not installed.
     """
-    if shutil.which('VBoxManage') is None:
+    if shutil.which("VBoxManage") is None:
         message = (
             '"VBoxManage" is not available on the PATH. '
-            'To resolve this, install VirtualBox from '
-            'https://www.virtualbox.org/wiki/Downloads.'
+            "To resolve this, install VirtualBox from "
+            "https://www.virtualbox.org/wiki/Downloads."
         )
         error(message=message)
         return CheckLevels.ERROR
@@ -57,8 +57,8 @@ def check_vagrant() -> CheckLevels:
     """
     Error if `vagrant` is not available on the path.
     """
-    if shutil.which('vagrant') is None:
-        error(message='`vagrant` must be available on the PATH.')
+    if shutil.which("vagrant") is None:
+        error(message="`vagrant` must be available on the PATH.")
         return CheckLevels.ERROR
     return CheckLevels.NONE
 
@@ -76,7 +76,7 @@ def check_vagrant_plugins_installed() -> CheckLevels:
 
     client = vagrant.Vagrant()
     plugin_list = client.plugin_list()
-    if 'vagrant-vbguest' in set(plugin.name for plugin in plugin_list):
+    if "vagrant-vbguest" in set(plugin.name for plugin in plugin_list):
         return CheckLevels.NONE
 
     message = (
@@ -100,8 +100,8 @@ def check_vagrant_plugin_versions() -> CheckLevels:
 
     client = vagrant.Vagrant()
     plugin_list = client.plugin_list()
-    name = 'vagrant-vbguest'
-    (plugin, ) = set(plugin for plugin in plugin_list if plugin.name == name)
+    name = "vagrant-vbguest"
+    (plugin,) = set(plugin for plugin in plugin_list if plugin.name == name)
     version_info = VersionInfo.parse(plugin.version)
     minimum_version = VersionInfo(0, 17, 2)
     # We require a minimum version to work around
@@ -112,14 +112,14 @@ def check_vagrant_plugin_versions() -> CheckLevels:
 
     message = (
         'The "vagrant-vbguest" plugin version is {plugin_version}. '
-        'The minimum supported version is 0.17.2. '
+        "The minimum supported version is 0.17.2. "
         'Run "vagrant plugin update".'
     ).format(plugin_version=plugin.version)
     error(message=message)
     return CheckLevels.ERROR
 
 
-@click.command('doctor')
+@click.command("doctor")
 @verbosity_option
 def doctor() -> None:
     """

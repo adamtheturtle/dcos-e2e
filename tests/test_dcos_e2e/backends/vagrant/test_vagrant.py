@@ -18,12 +18,12 @@ from dcos_e2e.node import Node, Output
 
 
 @pytest.mark.skipif(
-    os.environ.get('TRAVIS') == 'true',
-    reason='It is not possible to run VirtualBox on Travis CI',
+    os.environ.get("TRAVIS") == "true",
+    reason="It is not possible to run VirtualBox on Travis CI",
 )
 @pytest.mark.skipif(
-    os.environ.get('GITHUB_ACTIONS') == 'true',
-    reason='It is not possible to run VirtualBox on GitHub Actions',
+    os.environ.get("GITHUB_ACTIONS") == "true",
+    reason="It is not possible to run VirtualBox on GitHub Actions",
 )
 class TestRunIntegrationTest:  # pragma: no cover
     """
@@ -56,40 +56,42 @@ class TestRunIntegrationTest:  # pragma: no cover
 
             # No error is raised with a successful command.
             cluster.run_with_test_environment(
-                args=['pytest', '-vvv', '-s', '-x', 'test_units.py'],
+                args=["pytest", "-vvv", "-s", "-x", "test_units.py"],
                 output=Output.CAPTURE,
             )
 
 
-def _ip_from_vm_name(vm_name: str,
-                     ) -> Optional[IPv4Address]:  # pragma: no cover
+def _ip_from_vm_name(
+    vm_name: str,
+) -> Optional[IPv4Address]:  # pragma: no cover
     """
     Given the name of a VirtualBox VM, return its IP address.
     """
-    property_name = '/VirtualBox/GuestInfo/Net/1/V4/IP'
+    property_name = "/VirtualBox/GuestInfo/Net/1/V4/IP"
     args = [
         vertigo_py.constants.cmd,
-        'guestproperty',
-        'get',
+        "guestproperty",
+        "get",
         vm_name,
         property_name,
     ]
     property_result = vertigo_py.execute(args=args)  # type: ignore
     results = yaml.load(property_result, Loader=yaml.FullLoader)
-    if results == 'No value set!':
+    if results == "No value set!":
         return None
-    return IPv4Address(results['Value'])
+    return IPv4Address(results["Value"])
 
 
-def _description_from_vm_name(vm_name: str,
-                              ) -> Optional[str]:  # pragma: no cover
+def _description_from_vm_name(
+    vm_name: str,
+) -> Optional[str]:  # pragma: no cover
     """
     Given the name of a VirtualBox VM, return its description address.
     """
     vertigo_vm = vertigo_py.VM(name=vm_name)  # type: ignore
     info = vertigo_vm.parse_info()
-    if 'description' in info:
-        return str(info['description'])
+    if "description" in info:
+        return str(info["description"])
     return None
 
 
@@ -97,23 +99,24 @@ def _get_vm_from_node(node: Node) -> str:  # pragma: no cover
     """
     Return the container which represents the given ``node``.
     """
-    ls_result = bytes(vertigo_py.ls(option='vms'))  # type: ignore
-    lines = ls_result.decode().strip().split('\n')
-    vm_names = set(line.split(' ')[0][1:-1] for line in lines)
+    ls_result = bytes(vertigo_py.ls(option="vms"))  # type: ignore
+    lines = ls_result.decode().strip().split("\n")
+    vm_names = set(line.split(" ")[0][1:-1] for line in lines)
     [node_vm] = [
-        vm_name for vm_name in vm_names
+        vm_name
+        for vm_name in vm_names
         if _ip_from_vm_name(vm_name=vm_name) == node.private_ip_address
     ]
     return str(node_vm)
 
 
 @pytest.mark.skipif(
-    os.environ.get('TRAVIS') == 'true',
-    reason='It is not possible to run VirtualBox on Travis CI',
+    os.environ.get("TRAVIS") == "true",
+    reason="It is not possible to run VirtualBox on Travis CI",
 )
 @pytest.mark.skipif(
-    os.environ.get('GITHUB_ACTIONS') == 'true',
-    reason='It is not possible to run VirtualBox on GitHub Actions',
+    os.environ.get("GITHUB_ACTIONS") == "true",
+    reason="It is not possible to run VirtualBox on GitHub Actions",
 )
 class TestVMDescription:  # pragma: no cover
     """
@@ -130,7 +133,7 @@ class TestVMDescription:  # pragma: no cover
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             new_vm_name = _get_vm_from_node(node=master)
             description = _description_from_vm_name(vm_name=new_vm_name)
             assert description is None
@@ -146,7 +149,7 @@ class TestVMDescription:  # pragma: no cover
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             new_vm_name = _get_vm_from_node(node=master)
             vm_description = _description_from_vm_name(vm_name=new_vm_name)
             assert vm_description == description

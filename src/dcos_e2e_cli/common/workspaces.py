@@ -34,16 +34,16 @@ def workspace_dir_option(command: Callable[..., None]) -> Callable[..., None]:
     An option decorator for the workspace directory.
     """
     help_text = (
-        'Creating a cluster can use approximately 2 GB of temporary storage. '
+        "Creating a cluster can use approximately 2 GB of temporary storage. "
         'Set this option to use a custom "workspace" for this temporary '
-        'storage. '
-        'See '
-        'https://docs.python.org/3/library/tempfile.html#tempfile.gettempdir '
-        'for details on the temporary directory location if this option is '
-        'not set.'
+        "storage. "
+        "See "
+        "https://docs.python.org/3/library/tempfile.html#tempfile.gettempdir "
+        "for details on the temporary directory location if this option is "
+        "not set."
     )
     function = click.option(
-        '--workspace-dir',
+        "--workspace-dir",
         type=click_pathlib.Path(
             exists=True,
             dir_okay=True,
@@ -52,5 +52,7 @@ def workspace_dir_option(command: Callable[..., None]) -> Callable[..., None]:
         ),
         callback=get_workspace_dir,
         help=help_text,
-    )(command)  # type: Callable[..., None]
+    )(
+        command
+    )  # type: Callable[..., None]
     return function

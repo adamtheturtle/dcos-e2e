@@ -16,7 +16,7 @@ from ._common import ClusterContainers, existing_cluster_ids
 from ._options import node_transport_option
 
 
-@click.command('web')
+@click.command("web")
 @existing_cluster_id_option
 @verbosity_option
 @node_transport_option

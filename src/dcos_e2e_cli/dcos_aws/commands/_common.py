@@ -15,17 +15,17 @@ from dcos_e2e.node import Node, Role
 from dcos_e2e_cli._vendor.dcos_launch import config, get_launcher
 from dcos_e2e_cli.common.base_classes import ClusterRepresentation
 
-CLUSTER_ID_TAG_KEY = 'dcos_e2e.cluster_id'
-KEY_NAME_TAG_KEY = 'dcos_e2e.key_name'
+CLUSTER_ID_TAG_KEY = "dcos_e2e.cluster_id"
+KEY_NAME_TAG_KEY = "dcos_e2e.key_name"
 LINUX_DISTRIBUTIONS = {
-    'centos-7': Distribution.CENTOS_7,
+    "centos-7": Distribution.CENTOS_7,
 }
-NODE_TYPE_TAG_KEY = 'dcos_e2e.node_type'
-NODE_TYPE_MASTER_TAG_VALUE = 'master'
-NODE_TYPE_AGENT_TAG_VALUE = 'agent'
-NODE_TYPE_PUBLIC_AGENT_TAG_VALUE = 'public_agent'
-SSH_USER_TAG_KEY = 'dcos_e2e.ssh_user'
-WORKSPACE_DIR_TAG_KEY = 'dcos_e2e.workspace_dir'
+NODE_TYPE_TAG_KEY = "dcos_e2e.node_type"
+NODE_TYPE_MASTER_TAG_VALUE = "master"
+NODE_TYPE_AGENT_TAG_VALUE = "agent"
+NODE_TYPE_PUBLIC_AGENT_TAG_VALUE = "public_agent"
+SSH_USER_TAG_KEY = "dcos_e2e.ssh_user"
+WORKSPACE_DIR_TAG_KEY = "dcos_e2e.workspace_dir"
 
 
 def _tag_dict(instance: ServiceResource) -> Dict[str, str]:
@@ -38,8 +38,8 @@ def _tag_dict(instance: ServiceResource) -> Dict[str, str]:
         return tag_dict
 
     for tag in instance.tags:
-        key = tag['Key']
-        value = tag['Value']
+        key = tag["Key"]
+        value = tag["Value"]
         tag_dict[key] = value
 
     return tag_dict
@@ -52,9 +52,9 @@ def existing_cluster_ids(aws_region: str) -> Set[str]:
     Args:
         aws_region: The region to get clusters from.
     """
-    ec2 = boto3.resource('ec2', region_name=aws_region)
-    ec2_filter = {'Name': 'tag:' + CLUSTER_ID_TAG_KEY, 'Values': ['*']}
-    state_filter = {'Name': 'instance-state-name', 'Values': ['running']}
+    ec2 = boto3.resource("ec2", region_name=aws_region)
+    ec2_filter = {"Name": "tag:" + CLUSTER_ID_TAG_KEY, "Values": ["*"]}
+    state_filter = {"Name": "instance-state-name", "Values": ["running"]}
     ec2_instances = ec2.instances.filter(Filters=[ec2_filter, state_filter])
 
     cluster_ids = set()  # type: Set[str]
@@ -83,21 +83,21 @@ class ClusterInstances(ClusterRepresentation):
         """
         Return all EC2 instances in this cluster of a particular node type.
         """
-        ec2 = boto3.resource('ec2', region_name=self._aws_region)
+        ec2 = boto3.resource("ec2", region_name=self._aws_region)
         node_types = {
             Role.MASTER: NODE_TYPE_MASTER_TAG_VALUE,
             Role.AGENT: NODE_TYPE_AGENT_TAG_VALUE,
             Role.PUBLIC_AGENT: NODE_TYPE_PUBLIC_AGENT_TAG_VALUE,
         }
         cluster_id_tag_filter = {
-            'Name': 'tag:' + CLUSTER_ID_TAG_KEY,
-            'Values': [self._cluster_id],
+            "Name": "tag:" + CLUSTER_ID_TAG_KEY,
+            "Values": [self._cluster_id],
         }
         node_role_filter = {
-            'Name': 'tag:' + NODE_TYPE_TAG_KEY,
-            'Values': [node_types[role]],
+            "Name": "tag:" + NODE_TYPE_TAG_KEY,
+            "Values": [node_types[role]],
         }
-        state_filter = {'Name': 'instance-state-name', 'Values': ['running']}
+        state_filter = {"Name": "instance-state-name", "Values": ["running"]}
         filters = [cluster_id_tag_filter, node_role_filter, state_filter]
         ec2_instances = set(ec2.instances.filter(Filters=filters))
         return ec2_instances
@@ -140,12 +140,12 @@ class ClusterInstances(ClusterRepresentation):
         index = sorted_ips.index(public_ip_address)
 
         return {
-            'e2e_reference': '{role}_{index}'.format(role=role, index=index),
-            'ec2_instance_id': instance.id,
-            'public_ip_address': public_ip_address,
-            'private_ip_address': private_ip_address,
-            'ssh_user': self._ssh_default_user,
-            'ssh_key': str(self._ssh_key_path),
+            "e2e_reference": "{role}_{index}".format(role=role, index=index),
+            "ec2_instance_id": instance.id,
+            "public_ip_address": public_ip_address,
+            "private_ip_address": private_ip_address,
+            "ssh_user": self._ssh_default_user,
+            "ssh_key": str(self._ssh_key_path),
         }
 
     @property
@@ -163,7 +163,7 @@ class ClusterInstances(ClusterRepresentation):
         """
         A key which can be used to SSH to any node.
         """
-        return self._workspace_dir / 'ssh' / 'id_rsa'
+        return self._workspace_dir / "ssh" / "id_rsa"
 
     @property
     def masters(self) -> Set[ServiceResource]:
@@ -232,26 +232,26 @@ class ClusterInstances(ClusterRepresentation):
         aws_instance_type = backend.aws_instance_type
 
         launch_config = {
-            'admin_location': backend.admin_location,
-            'aws_region': self._aws_region,
-            'deployment_name': deployment_name,
-            'installer_url': 'https://example.com',
-            'instance_type': aws_instance_type,
-            'launch_config_version': 1,
-            'num_masters': masters,
-            'num_private_agents': agents,
-            'num_public_agents': public_agents,
-            'platform': 'aws',
-            'provider': 'onprem',
+            "admin_location": backend.admin_location,
+            "aws_region": self._aws_region,
+            "deployment_name": deployment_name,
+            "installer_url": "https://example.com",
+            "instance_type": aws_instance_type,
+            "launch_config_version": 1,
+            "num_masters": masters,
+            "num_private_agents": agents,
+            "num_public_agents": public_agents,
+            "platform": "aws",
+            "provider": "onprem",
         }
 
-        launch_config['dcos_config'] = backend.base_config
+        launch_config["dcos_config"] = backend.base_config
         validated_launch_config = config.get_validated_config(
             user_config=launch_config,
             config_dir=str(self._workspace_dir),
         )
         cloudformation = boto3.resource(
-            'cloudformation',
+            "cloudformation",
             region_name=self._aws_region,
         )
         stack_filter = cloudformation.stacks.filter(StackName=self._cluster_id)
@@ -263,10 +263,10 @@ class ClusterInstances(ClusterRepresentation):
         )
         # This matches what happens in
         # ``dcos_launch.aws.DcosCloudformationLauncher.create``.
-        launcher.config['stack_id'] = stack_id
+        launcher.config["stack_id"] = stack_id
         key_helper_details = launcher.key_helper()  #
         zen_helper_details = launcher.zen_helper()
-        launcher.config['temp_resources'] = {
+        launcher.config["temp_resources"] = {
             **key_helper_details,
             **zen_helper_details,
         }

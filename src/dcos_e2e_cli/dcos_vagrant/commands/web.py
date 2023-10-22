@@ -14,7 +14,7 @@ from dcos_e2e_cli.common.web import launch_web_ui
 from ._common import ClusterVMs, existing_cluster_ids
 
 
-@click.command('web')
+@click.command("web")
 @existing_cluster_id_option
 @verbosity_option
 def web(cluster_id: str) -> None:

@@ -53,7 +53,7 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('create', help=CREATE_HELP)
+@click.command("create", help=CREATE_HELP)
 @installer_path_argument
 @masters_option
 @agents_option
@@ -141,7 +141,7 @@ def create(
     nodes = {*cluster.masters, *cluster.agents, *cluster.public_agents}
     for node in nodes:
         if enable_selinux_enforcing:
-            node.run(args=['setenforce', '1'], sudo=True)
+            node.run(args=["setenforce", "1"], sudo=True)
 
     for node in cluster.masters:
         for path_pair in copy_to_master:

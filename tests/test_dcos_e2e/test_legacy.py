@@ -42,7 +42,7 @@ class Test113:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('1.13')
+                assert build.version.startswith("1.13")
                 assert build.commit
                 assert build.variant == DCOSVariant.OSS
 
@@ -58,10 +58,10 @@ class Test113:
         superuser_username = str(uuid.uuid4())
         superuser_password = str(uuid.uuid4())
         config = {
-            'superuser_username': superuser_username,
-            'superuser_password_hash': sha512_crypt.hash(superuser_password),
-            'fault_domain_enabled': False,
-            'license_key_contents': license_key_contents,
+            "superuser_username": superuser_username,
+            "superuser_password_hash": sha512_crypt.hash(superuser_password),
+            "fault_domain_enabled": False,
+            "license_key_contents": license_key_contents,
         }
 
         with Cluster(cluster_backend=cluster_backend) as cluster:
@@ -84,7 +84,7 @@ class Test113:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('1.13')
+                assert build.version.startswith("1.13")
                 assert build.commit
                 assert build.variant == DCOSVariant.ENTERPRISE
 
@@ -116,7 +116,7 @@ class Test20:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.0')
+                assert build.version.startswith("2.0")
                 assert build.commit
                 assert build.variant == DCOSVariant.OSS
 
@@ -132,10 +132,10 @@ class Test20:
         superuser_username = str(uuid.uuid4())
         superuser_password = str(uuid.uuid4())
         config = {
-            'superuser_username': superuser_username,
-            'superuser_password_hash': sha512_crypt.hash(superuser_password),
-            'fault_domain_enabled': False,
-            'license_key_contents': license_key_contents,
+            "superuser_username": superuser_username,
+            "superuser_password_hash": sha512_crypt.hash(superuser_password),
+            "fault_domain_enabled": False,
+            "license_key_contents": license_key_contents,
         }
 
         with Cluster(cluster_backend=cluster_backend) as cluster:
@@ -158,7 +158,7 @@ class Test20:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.0')
+                assert build.version.startswith("2.0")
                 assert build.commit
                 assert build.variant == DCOSVariant.ENTERPRISE
 
@@ -190,7 +190,7 @@ class Test21:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.1')
+                assert build.version.startswith("2.1")
                 assert build.commit
                 assert build.variant == DCOSVariant.OSS
 
@@ -206,10 +206,10 @@ class Test21:
         superuser_username = str(uuid.uuid4())
         superuser_password = str(uuid.uuid4())
         config = {
-            'superuser_username': superuser_username,
-            'superuser_password_hash': sha512_crypt.hash(superuser_password),
-            'fault_domain_enabled': False,
-            'license_key_contents': license_key_contents,
+            "superuser_username": superuser_username,
+            "superuser_password_hash": sha512_crypt.hash(superuser_password),
+            "fault_domain_enabled": False,
+            "license_key_contents": license_key_contents,
         }
 
         with Cluster(cluster_backend=cluster_backend) as cluster:
@@ -232,6 +232,6 @@ class Test21:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.1')
+                assert build.version.startswith("2.1")
                 assert build.commit
                 assert build.variant == DCOSVariant.ENTERPRISE

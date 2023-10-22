@@ -19,7 +19,7 @@ from ._options import aws_region_option
 from .doctor import doctor
 
 
-@click.command('wait')
+@click.command("wait")
 @existing_cluster_id_option
 @superuser_username_option
 @superuser_password_option

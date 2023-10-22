@@ -13,8 +13,8 @@ def _get_dependencies(requirements_file: Path) -> List[str]:
 
     This expects a requirements file with no ``--find-links`` lines.
     """
-    lines = requirements_file.read_text().strip().split('\n')
-    return [line for line in lines if not line.startswith('#')]
+    lines = requirements_file.read_text().strip().split("\n")
+    return [line for line in lines if not line.startswith("#")]
 
 
 def _get_class_name(homebrew_recipe_filename: str) -> str:
@@ -29,8 +29,8 @@ def _get_class_name(homebrew_recipe_filename: str) -> str:
         The Ruby class name to use, given a file name.
     """
     stem = Path(homebrew_recipe_filename).stem
-    disallowed_characters = {'-', '.', '+'}
-    class_name = ''
+    disallowed_characters = {"-", ".", "+"}
+    class_name = ""
     for index, character in enumerate(list(stem)):
         if character not in disallowed_characters:
             if index == 0:
@@ -54,11 +54,11 @@ def get_homebrew_formula(
     parent = Path(__file__).parent
     repository_root = parent.parent
     indirect_requires = _get_dependencies(
-        requirements_file=repository_root / 'indirect-requirements.txt',
+        requirements_file=repository_root / "indirect-requirements.txt",
     )
 
     direct_requires = _get_dependencies(
-        requirements_file=repository_root / 'requirements.txt',
+        requirements_file=repository_root / "requirements.txt",
     )
 
     requirements = indirect_requires + direct_requires
@@ -72,19 +72,19 @@ def get_homebrew_formula(
     # that this command runs on.
     # Some of those dependencies may error if installed on the "wrong"
     # platform.
-    args = ['poet', first]
+    args = ["poet", first]
     for requirement in requirements[1:]:
-        args.append('--also')
+        args.append("--also")
         args.append(requirement)
 
     result = subprocess.run(args=args, stdout=subprocess.PIPE, check=True)
     resource_stanzas = str(result.stdout.decode())
-    homepage_url = 'http://minidcos.readthedocs.io/en/latest/'
+    homepage_url = "http://minidcos.readthedocs.io/en/latest/"
 
     class_name = _get_class_name(
         homebrew_recipe_filename=homebrew_recipe_filename,
     )
-    homebrew_template_file = parent / 'homebrew_template.rb'
+    homebrew_template_file = parent / "homebrew_template.rb"
     homebrew_template = homebrew_template_file.read_text()
     return homebrew_template.format(
         class_name=class_name,

@@ -40,43 +40,44 @@ def _compose_ssh_command(
     Returns:
         The full SSH command to be run.
     """
-    ssh_args = ['ssh']
+    ssh_args = ["ssh"]
 
     if tty:
-        ssh_args.append('-t')
+        ssh_args.append("-t")
 
-    ssh_args += [
-        # This makes sure that only keys passed with the -i option are
-        # used. Needed when there are already keys present in the SSH
-        # key chain, which cause `Error: Too many Authentication
-        # Failures`.
-        '-o',
-        'IdentitiesOnly=yes',
-        # The node may be an unknown host.
-        '-o',
-        'StrictHostKeyChecking=no',
-        # Use an SSH key which is authorized.
-        '-i',
-        str(ssh_key_path),
-        # Run commands as the specified user.
-        '-l',
-        user,
-        # Bypass password checking.
-        '-o',
-        'PreferredAuthentications=publickey',
-        # Do not add this node to the standard known hosts file.
-        '-o',
-        'UserKnownHostsFile=/dev/null',
-        # Ignore warnings about remote host identification changes and new
-        # hosts being added to the known hosts file in particular.
-        # Also ignore "Connection to <IP-ADDRESS> closed".
-        '-o',
-        'LogLevel=QUIET',
-        str(public_ip_address),
-    ] + [
-        '{key}={value}'.format(key=k, value=quote(str(v)))
-        for k, v in env.items()
-    ] + [quote(arg) for arg in args]
+    ssh_args += (
+        [
+            # This makes sure that only keys passed with the -i option are
+            # used. Needed when there are already keys present in the SSH
+            # key chain, which cause `Error: Too many Authentication
+            # Failures`.
+            "-o",
+            "IdentitiesOnly=yes",
+            # The node may be an unknown host.
+            "-o",
+            "StrictHostKeyChecking=no",
+            # Use an SSH key which is authorized.
+            "-i",
+            str(ssh_key_path),
+            # Run commands as the specified user.
+            "-l",
+            user,
+            # Bypass password checking.
+            "-o",
+            "PreferredAuthentications=publickey",
+            # Do not add this node to the standard known hosts file.
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            # Ignore warnings about remote host identification changes and new
+            # hosts being added to the known hosts file in particular.
+            # Also ignore "Connection to <IP-ADDRESS> closed".
+            "-o",
+            "LogLevel=QUIET",
+            str(public_ip_address),
+        ]
+        + ["{key}={value}".format(key=k, value=quote(str(v))) for k, v in env.items()]
+        + [quote(arg) for arg in args]
+    )
 
     return ssh_args
 

@@ -26,46 +26,46 @@ def _docker_service_file(
         docker_version: The version of Docker to start.
     """
     storage_driver_name = {
-        DockerStorageDriver.AUFS: 'aufs',
-        DockerStorageDriver.OVERLAY: 'overlay',
-        DockerStorageDriver.OVERLAY_2: 'overlay2',
+        DockerStorageDriver.AUFS: "aufs",
+        DockerStorageDriver.OVERLAY: "overlay",
+        DockerStorageDriver.OVERLAY_2: "overlay2",
     }[storage_driver]
 
     daemon = {
-        DockerVersion.v1_11_2: '/usr/bin/docker daemon',
-        DockerVersion.v1_13_1: '/usr/bin/docker daemon',
-        DockerVersion.v17_12_1_ce: '/usr/bin/dockerd',
-        DockerVersion.v18_06_3_ce: '/usr/bin/dockerd',
+        DockerVersion.v1_11_2: "/usr/bin/docker daemon",
+        DockerVersion.v1_13_1: "/usr/bin/docker daemon",
+        DockerVersion.v17_12_1_ce: "/usr/bin/dockerd",
+        DockerVersion.v18_06_3_ce: "/usr/bin/dockerd",
     }[docker_version]
 
     docker_cmd = (
-        '{daemon} '
-        '-D '
-        '-s {storage_driver_name} '
-        '--exec-opt=native.cgroupdriver=cgroupfs '
-        '--cgroup-parent=${{CGROUP_PARENT}}'
+        "{daemon} "
+        "-D "
+        "-s {storage_driver_name} "
+        "--exec-opt=native.cgroupdriver=cgroupfs "
+        "--cgroup-parent=${{CGROUP_PARENT}}"
     ).format(
         storage_driver_name=storage_driver_name,
         daemon=daemon,
     )
 
     docker_service_contents = {
-        'Unit': {
-            'Description': 'Docker Application Container Engine',
-            'Documentation': 'https://docs.docker.com',
-            'After': 'dbus.service',
+        "Unit": {
+            "Description": "Docker Application Container Engine",
+            "Documentation": "https://docs.docker.com",
+            "After": "dbus.service",
         },
-        'Service': {
-            'EnvironmentFile': '/etc/docker/env',
-            'ExecStart': docker_cmd,
-            'LimitNOFILE': '1048576',
-            'LimitNPROC': '1048576',
-            'LimitCORE': 'infinity',
-            'Delegate': 'yes',
-            'TimeoutStartSec': '0',
+        "Service": {
+            "EnvironmentFile": "/etc/docker/env",
+            "ExecStart": docker_cmd,
+            "LimitNOFILE": "1048576",
+            "LimitNPROC": "1048576",
+            "LimitCORE": "infinity",
+            "Delegate": "yes",
+            "TimeoutStartSec": "0",
         },
-        'Install': {
-            'WantedBy': 'default.target',
+        "Install": {
+            "WantedBy": "default.target",
         },
     }
     config = configparser.ConfigParser()
@@ -118,9 +118,9 @@ def start_dcos_container(
         ports: The ports to expose on the host.
     """
     hostname = container_base_name + str(container_number)
-    environment = {'container': hostname}
+    environment = {"container": hostname}
 
-    client = docker.from_env(version='auto')
+    client = docker.from_env(version="auto")
     container = client.containers.create(
         name=hostname,
         privileged=True,
@@ -132,8 +132,8 @@ def start_dcos_container(
         mounts=mounts,
         tmpfs=tmpfs,
         labels=labels,
-        stop_signal='SIGRTMIN+3',
-        command=['/sbin/init'],
+        stop_signal="SIGRTMIN+3",
+        command=["/sbin/init"],
         ports=ports or {},
     )
     if network:
@@ -142,58 +142,61 @@ def start_dcos_container(
 
     disable_systemd_support_cmd = (
         "echo 'MESOS_SYSTEMD_ENABLE_SUPPORT=false' >> "
-        '/var/lib/dcos/mesos-slave-common'
+        "/var/lib/dcos/mesos-slave-common"
     )
 
     setup_mesos_cgroup_root = (
-        'MESOS_CGROUPS_ROOT=`grep memory /proc/1/cgroup | cut -d: -f3`/mesos; '
-        'MESOS_CGROUPS_ROOT=${MESOS_CGROUPS_ROOT:1}; '
+        "MESOS_CGROUPS_ROOT=`grep memory /proc/1/cgroup | cut -d: -f3`/mesos; "
+        "MESOS_CGROUPS_ROOT=${MESOS_CGROUPS_ROOT:1}; "
         'echo "MESOS_CGROUPS_ROOT=$MESOS_CGROUPS_ROOT" >> '
-        '/var/lib/dcos/mesos-slave-common'
+        "/var/lib/dcos/mesos-slave-common"
     )
 
-    docker_service_name = 'docker.service'
+    docker_service_name = "docker.service"
     docker_service_text = _docker_service_file(
         storage_driver=docker_storage_driver,
         docker_version=docker_version,
     )
-    docker_service_dst = '/lib/systemd/system/' + docker_service_name
+    docker_service_dst = "/lib/systemd/system/" + docker_service_name
     echo_docker = [
-        'echo',
-        '-e',
+        "echo",
+        "-e",
         shlex.quote(docker_service_text),
-        '>',
+        ">",
         docker_service_dst,
     ]
     docker_env_setup = (
-        'CGROUP=`grep memory /proc/1/cgroup | cut -d: -f3`; '
+        "CGROUP=`grep memory /proc/1/cgroup | cut -d: -f3`; "
         'echo "CGROUP_PARENT=$CGROUP/docker" >> '
-        '/etc/docker/env'
+        "/etc/docker/env"
     )
 
     public_key = public_key_path.read_text()
-    echo_key = ['echo', public_key, '>>', '/root/.ssh/authorized_keys']
+    echo_key = ["echo", public_key, ">>", "/root/.ssh/authorized_keys"]
 
     for cmd in [
-        ['mkdir', '-p', '/var/lib/dcos'],
-        ['/bin/bash', '-c', docker_env_setup],
-        ['mkdir', '-p', '/lib/systemd/system'],
-        ['/bin/bash', '-c', '{cmd}'.format(cmd=' '.join(echo_docker))],
+        ["mkdir", "-p", "/var/lib/dcos"],
+        ["/bin/bash", "-c", docker_env_setup],
+        ["mkdir", "-p", "/lib/systemd/system"],
+        ["/bin/bash", "-c", "{cmd}".format(cmd=" ".join(echo_docker))],
         [  # Retry in case D-Bus is not ready yet
-            'timeout', '120', '/bin/bash', '-c',
-            'until systemctl daemon-reload; do sleep 1; done',
+            "timeout",
+            "120",
+            "/bin/bash",
+            "-c",
+            "until systemctl daemon-reload; do sleep 1; done",
         ],
-        ['systemctl', 'enable', docker_service_name],
-        ['systemctl', 'start', docker_service_name],
-        ['/bin/bash', '-c', disable_systemd_support_cmd],
-        ['/bin/bash', '-c', setup_mesos_cgroup_root],
-        ['mkdir', '--parents', '/root/.ssh'],
-        ['/bin/bash', '-c', '{cmd}'.format(cmd=' '.join(echo_key))],
-        ['rm', '-f', '/run/nologin', '||', 'true'],
-        ['systemctl', 'start', 'sshd'],
+        ["systemctl", "enable", docker_service_name],
+        ["systemctl", "start", docker_service_name],
+        ["/bin/bash", "-c", disable_systemd_support_cmd],
+        ["/bin/bash", "-c", setup_mesos_cgroup_root],
+        ["mkdir", "--parents", "/root/.ssh"],
+        ["/bin/bash", "-c", "{cmd}".format(cmd=" ".join(echo_key))],
+        ["rm", "-f", "/run/nologin", "||", "true"],
+        ["systemctl", "start", "sshd"],
         # Work around https://jira.d2iq.com/browse/DCOS_OSS-1361.
-        ['systemd-tmpfiles', '--create', '--prefix', '/var/log/journal'],
-        ['systemd-tmpfiles', '--create', '--prefix', '/run/log/journal'],
+        ["systemd-tmpfiles", "--create", "--prefix", "/var/log/journal"],
+        ["systemd-tmpfiles", "--create", "--prefix", "/run/log/journal"],
     ]:
         exit_code, output = container.exec_run(cmd=cmd)
-        assert exit_code == 0, ' '.join(cmd) + ': ' + output.decode()
+        assert exit_code == 0, " ".join(cmd) + ": " + output.decode()

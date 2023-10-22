@@ -19,26 +19,26 @@ length.
 """
 
 
-class Encoder():
+class Encoder:
     """Encode an arbitray message type into a 'RecordIO' message.
 
-       This class encapsulates the process of encoding an
-       arbitrary message into a 'RecordIO' message. Its
-       constructor takes a serialization function of the form
-       'serialize(message)'. This serialization function is
-       responsible for knowing how to take whatever message type
-       is passed to 'encode()' and serializing it to a 'UTF-8'
-       encoded byte array.
+    This class encapsulates the process of encoding an
+    arbitrary message into a 'RecordIO' message. Its
+    constructor takes a serialization function of the form
+    'serialize(message)'. This serialization function is
+    responsible for knowing how to take whatever message type
+    is passed to 'encode()' and serializing it to a 'UTF-8'
+    encoded byte array.
 
-       Once 'encode(message)' is called, it will use the
-       serialization function to convert 'message' into a 'UTF-8'
-       encoded byte array, wrap it in a 'RecordIO' frame,
-       and return it.
+    Once 'encode(message)' is called, it will use the
+    serialization function to convert 'message' into a 'UTF-8'
+    encoded byte array, wrap it in a 'RecordIO' frame,
+    and return it.
 
-       :param serialize: a function to serialize any message
-                         passed to 'encode()' into a 'UTF-8'
-                         encoded byte array
-       :type serialize: function
+    :param serialize: a function to serialize any message
+                      passed to 'encode()' into a 'UTF-8'
+                      encoded byte array
+    :type serialize: function
     """
 
     def __init__(self, serialize):
@@ -62,27 +62,27 @@ class Encoder():
         return bytes(str(len(s)) + "\n", "UTF-8") + s
 
 
-class Decoder():
+class Decoder:
     """Decode a 'RecordIO' message back to an arbitrary message type.
 
-       This class encapsulates the process of decoding a message
-       previously encoded with 'RecordIO' back to an arbitrary
-       message type. Its constructor takes a deserialization
-       function of the form 'deserialize(data)'. This
-       deserialization function is responsible for knowing how to
-       take a fully constructed 'RecordIO' message containing a
-       'UTF-8' encoded byte array and deserialize it back into the
-       original message type.
+    This class encapsulates the process of decoding a message
+    previously encoded with 'RecordIO' back to an arbitrary
+    message type. Its constructor takes a deserialization
+    function of the form 'deserialize(data)'. This
+    deserialization function is responsible for knowing how to
+    take a fully constructed 'RecordIO' message containing a
+    'UTF-8' encoded byte array and deserialize it back into the
+    original message type.
 
-       The 'decode(data)' message takes a 'UTF-8' encoded byte array
-       as input and buffers it across subsequent calls to
-       construct a set of fully constructed 'RecordIO' messages that
-       are decoded and returned in a list.
+    The 'decode(data)' message takes a 'UTF-8' encoded byte array
+    as input and buffers it across subsequent calls to
+    construct a set of fully constructed 'RecordIO' messages that
+    are decoded and returned in a list.
 
-       :param deserialize: a function to deserialize from 'RecordIO'
-                           messages built up by subsequent calls
-                           to 'decode(data)'
-       :type deserialize: function
+    :param deserialize: a function to deserialize from 'RecordIO'
+                        messages built up by subsequent calls
+                        to 'decode(data)'
+    :type deserialize: function
     """
 
     HEADER = 0
@@ -117,17 +117,22 @@ class Decoder():
 
         for c in data:
             if self.state == self.HEADER:
-                if c != ord('\n'):
+                if c != ord("\n"):
                     self.buffer += bytes([c])
                     continue
 
                 try:
                     self.length = int(self.buffer.decode("UTF-8"))
-                    assert self.length >= 0, "Negative record length '{length}'".format(length=self.length)
+                    assert self.length >= 0, "Negative record length '{length}'".format(
+                        length=self.length
+                    )
                 except Exception as exception:
                     self.state = self.FAILED
-                    raise Exception("Failed to decode length '{buffer}': {error}"
-                                    .format(buffer=self.buffer, error=exception)) from exception
+                    raise Exception(
+                        "Failed to decode length '{buffer}': {error}".format(
+                            buffer=self.buffer, error=exception
+                        )
+                    ) from exception
 
                 self.buffer = bytes("", "UTF-8")
                 self.state = self.RECORD

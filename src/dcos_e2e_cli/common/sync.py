@@ -15,8 +15,7 @@ from dcos_e2e.cluster import Cluster
 from dcos_e2e.node import DCOSVariant, Node
 from dcos_e2e_cli.common.variants import get_cluster_variant
 
-SYNC_HELP = (
-    """
+SYNC_HELP = """
     Sync files from a DC/OS checkout to master nodes.
 
     This syncs integration test files and bootstrap files.
@@ -34,7 +33,6 @@ SYNC_HELP = (
     integration tests are in the top level ``packages/dcos-integration-test``
     directory.
     """
-)
 
 
 def _tar_with_filter(
@@ -46,8 +44,8 @@ def _tar_with_filter(
     by the ``filter``.
     """
     tarstream = io.BytesIO()
-    with tarfile.TarFile(fileobj=tarstream, mode='w') as tar:
-        tar.add(name=str(path), arcname='/', filter=tar_filter)
+    with tarfile.TarFile(fileobj=tarstream, mode="w") as tar:
+        tar.add(name=str(path), arcname="/", filter=tar_filter)
     tarstream.seek(0)
 
     return tarstream
@@ -58,9 +56,9 @@ def _cache_filter(tar_info: tarfile.TarInfo) -> Optional[tarfile.TarInfo]:
     Filter for ``tarfile.TarFile.add`` which removes Python and pytest cache
     files.
     """
-    if '__pycache__' in tar_info.name:
+    if "__pycache__" in tar_info.name:
         return None
-    if tar_info.name.endswith('.pyc'):
+    if tar_info.name.endswith(".pyc"):
         return None
     return tar_info
 
@@ -74,7 +72,7 @@ def _send_tarstream_to_node_and_extract(
     """
     Given a tarstream, send the contents to a remote path.
     """
-    tar_path = Path('/tmp/dcos_e2e_tmp.tar')
+    tar_path = Path("/tmp/dcos_e2e_tmp.tar")
     with tempfile.NamedTemporaryFile() as tmp_file:
         tmp_file.write(tarstream.getvalue())
         tmp_file.flush()
@@ -85,9 +83,9 @@ def _send_tarstream_to_node_and_extract(
             sudo=sudo,
         )
 
-    tar_args = ['tar', '-C', str(remote_path), '-xvf', str(tar_path)]
+    tar_args = ["tar", "-C", str(remote_path), "-xvf", str(tar_path)]
     node.run(args=tar_args, sudo=sudo)
-    node.run(args=['rm', str(tar_path)], sudo=sudo)
+    node.run(args=["rm", str(tar_path)], sudo=sudo)
 
 
 def _sync_bootstrap_to_masters(
@@ -98,19 +96,15 @@ def _sync_bootstrap_to_masters(
     """
     Sync bootstrap code to all masters in a cluster.
     """
-    local_packages = dcos_checkout_dir / 'packages'
-    local_bootstrap_dir = (
-        local_packages / 'bootstrap' / 'extra' / 'dcos_internal_utils'
-    )
-    node_lib_dir = Path('/opt/mesosphere/active/bootstrap/lib')
+    local_packages = dcos_checkout_dir / "packages"
+    local_bootstrap_dir = local_packages / "bootstrap" / "extra" / "dcos_internal_utils"
+    node_lib_dir = Path("/opt/mesosphere/active/bootstrap/lib")
     # Different versions of DC/OS have different versions of Python.
     master = next(iter(cluster.masters))
-    ls_result = master.run(args=['ls', str(node_lib_dir)])
+    ls_result = master.run(args=["ls", str(node_lib_dir)])
     python_version = ls_result.stdout.decode().strip()
     node_python_dir = node_lib_dir / python_version
-    node_bootstrap_dir = (
-        node_python_dir / 'site-packages' / 'dcos_internal_utils'
-    )
+    node_bootstrap_dir = node_python_dir / "site-packages" / "dcos_internal_utils"
     bootstrap_tarstream = _tar_with_filter(
         path=local_bootstrap_dir,
         tar_filter=_cache_filter,
@@ -129,8 +123,8 @@ def _dcos_checkout_dir_variant(dcos_checkout_dir: Path) -> DCOSVariant:
     """
     Return the variant which matches the DC/OS checkout directory.
     """
-    local_packages = dcos_checkout_dir / 'packages'
-    upstream_json = local_packages / 'upstream.json'
+    local_packages = dcos_checkout_dir / "packages"
+    upstream_json = local_packages / "upstream.json"
     return {
         True: DCOSVariant.ENTERPRISE,
         False: DCOSVariant.OSS,
@@ -200,12 +194,12 @@ def sync_code_to_masters(
         click.BadArgumentUsage: If ``DCOS_CHECKOUT_DIR`` is set to something
             that is not a checkout of a DC/OS repository.
     """
-    local_packages = dcos_checkout_dir / 'packages'
-    local_test_dir = local_packages / 'dcos-integration-test' / 'extra'
+    local_packages = dcos_checkout_dir / "packages"
+    local_test_dir = local_packages / "dcos-integration-test" / "extra"
     if not Path(local_test_dir).exists():
         message = (
-            'DCOS_CHECKOUT_DIR must be set to the checkout of a DC/OS '
-            'repository.\n'
+            "DCOS_CHECKOUT_DIR must be set to the checkout of a DC/OS "
+            "repository.\n"
             '"{local_test_dir}" does not exist.'
         ).format(local_test_dir=local_test_dir)
         raise click.BadArgumentUsage(message=message)
@@ -214,7 +208,7 @@ def sync_code_to_masters(
         dcos_checkout_dir=dcos_checkout_dir,
     )
 
-    node_test_dir = Path('/opt/mesosphere/active/dcos-integration-test')
+    node_test_dir = Path("/opt/mesosphere/active/dcos-integration-test")
 
     test_tarstream = _tar_with_filter(
         path=local_test_dir,
@@ -224,8 +218,8 @@ def sync_code_to_masters(
     dcos_variant = get_cluster_variant(cluster=cluster)
     if dcos_variant is None:
         message = (
-            'The DC/OS variant cannot yet be determined. '
-            'Therefore, code cannot be synced to the cluster.'
+            "The DC/OS variant cannot yet be determined. "
+            "Therefore, code cannot be synced to the cluster."
         )
         click.echo(message, err=True)
         sys.exit(1)
@@ -235,21 +229,21 @@ def sync_code_to_masters(
         and dcos_checkout_dir_variant == DCOSVariant.OSS,
     )
 
-    node_active_dir = Path('/opt/mesosphere/active')
-    node_test_dir = node_active_dir / 'dcos-integration-test'
+    node_active_dir = Path("/opt/mesosphere/active")
+    node_test_dir = node_active_dir / "dcos-integration-test"
 
     if syncing_oss_to_ee:
         # This matches part of
         # https://github.com/mesosphere/dcos-enterprise/blob/master/packages/dcos-integration-test/ee.build
         for master in cluster.masters:
-            master.run(args=['rm', '-rf', str(node_test_dir / 'util')])
+            master.run(args=["rm", "-rf", str(node_test_dir / "util")])
 
             # This makes an assumption that all tests are at the top level.
             master.run(
                 args=[
-                    'rm',
-                    '-rf',
-                    str(node_test_dir / 'open_source_tests' / '*.py'),
+                    "rm",
+                    "-rf",
+                    str(node_test_dir / "open_source_tests" / "*.py"),
                 ],
                 # We use a wildcard character, `*`, so we need shell expansion.
                 shell=True,
@@ -258,9 +252,9 @@ def sync_code_to_masters(
 
             master.run(
                 args=[
-                    'mkdir',
-                    '--parents',
-                    str(node_test_dir / 'open_source_tests'),
+                    "mkdir",
+                    "--parents",
+                    str(node_test_dir / "open_source_tests"),
                 ],
                 sudo=sudo,
             )
@@ -268,21 +262,21 @@ def sync_code_to_masters(
             _send_tarstream_to_node_and_extract(
                 tarstream=test_tarstream,
                 node=master,
-                remote_path=node_test_dir / 'open_source_tests',
+                remote_path=node_test_dir / "open_source_tests",
                 sudo=sudo,
             )
             master.run(
                 args=[
-                    'rm',
-                    '-rf',
-                    str(node_test_dir / 'open_source_tests' / 'conftest.py'),
+                    "rm",
+                    "-rf",
+                    str(node_test_dir / "open_source_tests" / "conftest.py"),
                 ],
                 sudo=sudo,
             )
             master.run(
                 args=[
-                    'mv',
-                    str(node_test_dir / 'open_source_tests' / 'util'),
+                    "mv",
+                    str(node_test_dir / "open_source_tests" / "util"),
                     str(node_test_dir),
                 ],
                 sudo=sudo,
@@ -297,7 +291,7 @@ def sync_code_to_masters(
         for master in cluster.masters:
             # This makes an assumption that all tests are at the top level.
             master.run(
-                args=['rm', '-rf', str(node_test_dir / '*.py')],
+                args=["rm", "-rf", str(node_test_dir / "*.py")],
                 # We use a wildcard character, `*`, so we need shell expansion.
                 shell=True,
                 sudo=sudo,

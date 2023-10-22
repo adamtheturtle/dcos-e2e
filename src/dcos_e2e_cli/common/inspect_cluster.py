@@ -24,9 +24,9 @@ def show_cluster_details(
         cluster_representation: A representation of the cluster.
     """
     keys = {
-        'masters': cluster_representation.masters,
-        'agents': cluster_representation.agents,
-        'public_agents': cluster_representation.public_agents,
+        "masters": cluster_representation.masters,
+        "agents": cluster_representation.agents,
+        "public_agents": cluster_representation.public_agents,
     }
 
     nodes = {
@@ -41,14 +41,14 @@ def show_cluster_details(
     dcos_variant = get_cluster_variant(cluster=cluster)
     variant_name = str(dcos_variant if dcos_variant else None)
     master = next(iter(cluster.masters))
-    web_ui = 'http://' + str(master.public_ip_address)
+    web_ui = "http://" + str(master.public_ip_address)
 
     data = {
-        'Cluster ID': cluster_id,
-        'Web UI': web_ui,
-        'Nodes': nodes,
-        'DC/OS Variant': variant_name,
+        "Cluster ID": cluster_id,
+        "Web UI": web_ui,
+        "Nodes": nodes,
+        "DC/OS Variant": variant_name,
     }  # type: Dict[str, Any]
     click.echo(
-        json.dumps(data, indent=4, separators=(',', ': '), sort_keys=True),
+        json.dumps(data, indent=4, separators=(",", ": "), sort_keys=True),
     )

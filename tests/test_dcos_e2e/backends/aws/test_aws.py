@@ -31,19 +31,19 @@ class TestDefaults:
         """
         The default ``admin_location`` is correct.
         """
-        assert AWS().admin_location == '0.0.0.0/0'
+        assert AWS().admin_location == "0.0.0.0/0"
 
     def test_aws_instance_type(self) -> None:
         """
         The default ``aws_instance_type`` is correct.
         """
-        assert AWS().aws_instance_type == 'm4.large'
+        assert AWS().aws_instance_type == "m4.large"
 
     def test_aws_region(self) -> None:
         """
         The default ``aws_region`` is correct.
         """
-        assert AWS().aws_region == 'us-west-2'
+        assert AWS().aws_region == "us-west-2"
 
     def test_linux_distribution(self) -> None:
         """
@@ -65,8 +65,8 @@ class TestUnsupported:
             AWS(linux_distribution=Distribution.UBUNTU_16_04)
 
         expected_error = (
-            'The UBUNTU_16_04 Linux distribution is currently not supported '
-            'by the AWS backend.'
+            "The UBUNTU_16_04 Linux distribution is currently not supported "
+            "by the AWS backend."
         )
 
         assert str(excinfo.value) == expected_error
@@ -76,7 +76,7 @@ class TestUnsupported:
         Destroying a particular node is not supported on the AWS backend.
         """
         with Cluster(cluster_backend=AWS()) as cluster:
-            (agent, ) = cluster.agents
+            (agent,) = cluster.agents
             with pytest.raises(NotImplementedError):
                 cluster.destroy_node(node=agent)
 
@@ -86,7 +86,7 @@ class TestRunIntegrationTest:
     Tests for functionality specific to the AWS backend.
     """
 
-    @pytest.mark.parametrize('linux_distribution', [Distribution.CENTOS_7])
+    @pytest.mark.parametrize("linux_distribution", [Distribution.CENTOS_7])
     def test_run_enterprise_integration_test(
         self,
         ee_installer_url: str,
@@ -100,11 +100,11 @@ class TestRunIntegrationTest:
         superuser_username = str(uuid.uuid4())
         superuser_password = str(uuid.uuid4())
         config = {
-            'superuser_username': superuser_username,
-            'superuser_password_hash': sha512_crypt.hash(superuser_password),
-            'fault_domain_enabled': False,
-            'license_key_contents': license_key_contents,
-            'security': 'strict',
+            "superuser_username": superuser_username,
+            "superuser_password_hash": sha512_crypt.hash(superuser_password),
+            "fault_domain_enabled": False,
+            "license_key_contents": license_key_contents,
+            "security": "strict",
         }
 
         cluster_backend = AWS(linux_distribution=linux_distribution)
@@ -113,7 +113,6 @@ class TestRunIntegrationTest:
             cluster_backend=cluster_backend,
             masters=1,
         ) as cluster:
-
             cluster.install_dcos_from_url(
                 dcos_installer=ee_installer_url,
                 dcos_config={
@@ -131,12 +130,12 @@ class TestRunIntegrationTest:
 
             # No error is raised with a successful command.
             # We choose a test file which runs very quickly.
-            fast_test_file = 'test_marathon_authn_authz.py'
+            fast_test_file = "test_marathon_authn_authz.py"
             cluster.run_with_test_environment(
-                args=['pytest', '-vvv', '-s', '-x', fast_test_file],
+                args=["pytest", "-vvv", "-s", "-x", fast_test_file],
                 env={
-                    'DCOS_LOGIN_UNAME': superuser_username,
-                    'DCOS_LOGIN_PW': superuser_password,
+                    "DCOS_LOGIN_UNAME": superuser_username,
+                    "DCOS_LOGIN_PW": superuser_password,
                 },
                 output=Output.LOG_AND_CAPTURE,
             )
@@ -182,16 +181,16 @@ class TestCustomKeyPair:
         """
         It is possible to pass a custom key pair to the AWS backend.
         """
-        key_name = 'e2e-test-{random}'.format(random=uuid.uuid4().hex)
-        private_key_path = tmp_path / 'private_key'
-        public_key_path = tmp_path / 'public_key'
+        key_name = "e2e-test-{random}".format(random=uuid.uuid4().hex)
+        private_key_path = tmp_path / "private_key"
+        public_key_path = tmp_path / "public_key"
         _write_key_pair(
             public_key_path=public_key_path,
             private_key_path=private_key_path,
         )
         backend = AWS(aws_key_pair=(key_name, private_key_path))
         region_name = backend.aws_region
-        ec2 = boto3.client('ec2', region_name=region_name)
+        ec2 = boto3.client("ec2", region_name=region_name)
         ec2.import_key_pair(
             KeyName=key_name,
             PublicKeyMaterial=public_key_path.read_bytes(),
@@ -203,7 +202,7 @@ class TestCustomKeyPair:
                 agents=0,
                 public_agents=0,
             ) as cluster:
-                (master, ) = cluster.masters
+                (master,) = cluster.masters
                 node = Node(
                     public_ip_address=master.public_ip_address,
                     private_ip_address=master.private_ip_address,
@@ -211,7 +210,7 @@ class TestCustomKeyPair:
                     ssh_key_path=private_key_path,
                 )
 
-                node.run(args=['echo', '1'])
+                node.run(args=["echo", "1"])
         finally:
             ec2.delete_key_pair(KeyName=key_name)
 
@@ -248,7 +247,7 @@ class TestDCOSInstallation:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             master.install_dcos_from_url(
                 dcos_installer=oss_installer_url,
                 dcos_config=cluster.base_config,
@@ -273,8 +272,8 @@ class TestDCOSInstallation:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
-            ip_detect_file = tmp_path / 'ip-detect'
+            (master,) = cluster.masters
+            ip_detect_file = tmp_path / "ip-detect"
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
@@ -291,7 +290,7 @@ class TestDCOSInstallation:
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
-                args=['cat', '/opt/mesosphere/bin/detect_ip'],
+                args=["cat", "/opt/mesosphere/bin/detect_ip"],
             )
             node_script_contents = cat_result.stdout.decode()
             assert node_script_contents == ip_detect_contents
@@ -314,8 +313,8 @@ class TestDCOSInstallation:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
-            ip_detect_file = tmp_path / 'ip-detect'
+            (master,) = cluster.masters
+            ip_detect_file = tmp_path / "ip-detect"
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
@@ -330,12 +329,12 @@ class TestDCOSInstallation:
                 output=Output.LOG_AND_CAPTURE,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=[
-                    (ip_detect_file, Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path("/genconf/ip-detect")),
                 ],
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
-                args=['cat', '/opt/mesosphere/bin/detect_ip'],
+                args=["cat", "/opt/mesosphere/bin/detect_ip"],
             )
             node_script_contents = cat_result.stdout.decode()
             assert node_script_contents == ip_detect_contents
@@ -352,8 +351,8 @@ def _tag_dict(instance: ServiceResource) -> Dict[str, str]:
     tags = instance.tags or {}
 
     for tag in tags:
-        key = tag['Key']
-        value = tag['Value']
+        key = tag["Key"]
+        value = tag["Value"]
         tag_dict[key] = value
 
     return tag_dict
@@ -367,13 +366,13 @@ def _get_ec2_instance_from_node(
     Return the EC2 instance which matches the given ``node`` on the given
     ``aws_region``.
     """
-    ec2 = boto3.resource('ec2', region_name=aws_region)
+    ec2 = boto3.resource("ec2", region_name=aws_region)
     [instance] = list(
         ec2.instances.filter(
             Filters=[
                 {
-                    'Name': 'ip-address',
-                    'Values': [str(node.public_ip_address)],
+                    "Name": "ip-address",
+                    "Values": [str(node.public_ip_address)],
                 },
             ],
         ),

@@ -24,23 +24,23 @@ def _ci_file_patterns() -> Set[str]:
     base = Path(__file__).parent.parent
     ci_patterns = set()  # type: Set[str]
 
-    travis_file = base / '.travis.yml'
+    travis_file = base / ".travis.yml"
     travis_contents = travis_file.read_text()
     travis_dict = yaml.load(travis_contents, Loader=yaml.FullLoader)
-    travis_matrix = travis_dict['env']['matrix']
+    travis_matrix = travis_dict["env"]["matrix"]
 
     for matrix_item in travis_matrix:
-        key, value = matrix_item.split('=')
-        assert key == 'CI_PATTERN'
+        key, value = matrix_item.split("=")
+        assert key == "CI_PATTERN"
         assert value not in ci_patterns
         ci_patterns.add(value)
 
-    actions_file = base / '.github' / 'workflows' / 'dcos-e2e-test.yml'
+    actions_file = base / ".github" / "workflows" / "dcos-e2e-test.yml"
     actions_contents = actions_file.read_text()
     actions_dict = yaml.load(actions_contents, Loader=yaml.FullLoader)
-    actions_matrix = actions_dict['jobs']['build']['strategy']['matrix']
+    actions_matrix = actions_dict["jobs"]["build"]["strategy"]["matrix"]
 
-    for value in actions_matrix['ci-pattern']:
+    for value in actions_matrix["ci-pattern"]:
         assert value not in ci_patterns
         ci_patterns.add(value)
 
@@ -52,11 +52,11 @@ def _tests_from_pattern(ci_pattern: str) -> Set[str]:
     From a CI pattern, get all tests ``pytest`` would collect.
     """
     tests = set([])  # type: Set[str]
-    args = ['pytest', '--collect-only', ci_pattern, '-q']
+    args = ["pytest", "--collect-only", ci_pattern, "-q"]
     result = subprocess.run(args=args, stdout=subprocess.PIPE)
     output = result.stdout
     for line in output.splitlines():
-        if line and not line.startswith(b'no tests ran in'):
+        if line and not line.startswith(b"no tests ran in"):
             tests.add(line.decode())
 
     return tests
@@ -80,7 +80,7 @@ def test_ci_patterns_valid() -> None:
     ci_patterns = _ci_file_patterns()
 
     for ci_pattern in ci_patterns:
-        collect_only_result = pytest.main(['--collect-only', ci_pattern])
+        collect_only_result = pytest.main(["--collect-only", ci_pattern])
 
         message = '"{ci_pattern}" does not match any tests.'.format(
             ci_pattern=ci_pattern,
@@ -104,15 +104,15 @@ def test_tests_collected_once() -> None:
     for test_name, patterns in tests_to_patterns.items():
         message = (
             'Test "{test_name}" will be run once for each pattern in '
-            '{patterns}. '
-            'Each test should be run only once.'
+            "{patterns}. "
+            "Each test should be run only once."
         ).format(
             test_name=test_name,
             patterns=patterns,
         )
         assert len(patterns) == 1, message
 
-    all_tests = _tests_from_pattern(ci_pattern='tests/')
+    all_tests = _tests_from_pattern(ci_pattern="tests/")
     assert tests_to_patterns.keys() - all_tests == set()
     assert all_tests - tests_to_patterns.keys() == set()
 
@@ -124,13 +124,13 @@ def test_init_files() -> None:
     If ``__init__`` files are missing, linters may not run on all files that
     they should run on.
     """
-    directories = (Path('src'), Path('tests'))
+    directories = (Path("src"), Path("tests"))
 
     for directory in directories:
-        files = directory.glob('**/*.py')
+        files = directory.glob("**/*.py")
         for python_file in files:
             parent = python_file.parent
-            expected_init = parent / '__init__.py'
+            expected_init = parent / "__init__.py"
             assert expected_init.exists()
 
 
@@ -140,9 +140,9 @@ def test_pydocstyle() -> None:
     We could use the "match" ``pydocstyle`` setting, but this involves regular
     expressions and got too complex.
     """
-    args = ['pydocstyle']
+    args = ["pydocstyle"]
     pydocstyle_result = subprocess.run(args=args, stdout=subprocess.PIPE)
-    lines = pydocstyle_result.stdout.decode().strip().split('\n')
+    lines = pydocstyle_result.stdout.decode().strip().split("\n")
     path_issue_pairs = []
     for item_number in range(int(len(lines) / 2)):
         path = lines[item_number * 2] * 2
@@ -151,10 +151,10 @@ def test_pydocstyle() -> None:
 
     real_errors = []
     ignored_path_substrings = (
-        '_vendor',
-        '_version.py',
-        'versioneer.py',
-        './tests',
+        "_vendor",
+        "_version.py",
+        "versioneer.py",
+        "./tests",
     )
     for pair in path_issue_pairs:
         path, issue = pair
@@ -164,8 +164,8 @@ def test_pydocstyle() -> None:
                 ignore = True
 
         if not ignore:
-            sys.stderr.write(path + '\n')
-            sys.stderr.write(issue + '\n')
+            sys.stderr.write(path + "\n")
+            sys.stderr.write(issue + "\n")
             real_errors.append(pair)
 
     assert not real_errors

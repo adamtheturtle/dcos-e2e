@@ -19,13 +19,13 @@ def _safe_decode(output_bytes: bytes) -> str:
     """
     try:
         return output_bytes.decode(
-            encoding='utf-8',
-            errors='strict',
+            encoding="utf-8",
+            errors="strict",
         )
     except UnicodeDecodeError:
         return output_bytes.decode(
-            encoding='ascii',
-            errors='backslashreplace',
+            encoding="ascii",
+            errors="backslashreplace",
         )
 
 
@@ -35,13 +35,13 @@ class _LineLogger:
     """
 
     def __init__(self, logger: Callable[[str], None]) -> None:
-        self._buffer = b''
+        self._buffer = b""
         self._logger = logger
 
     def log(self, data: bytes) -> None:
         self._buffer += data
 
-        lines = self._buffer.split(b'\n')
+        lines = self._buffer.split(b"\n")
         self._buffer = lines.pop()
 
         for line in lines:
@@ -50,7 +50,7 @@ class _LineLogger:
     def flush(self) -> None:
         if self._buffer:
             self._logger(_safe_decode(self._buffer))
-            self._buffer = b''
+            self._buffer = b""
 
 
 def run_subprocess(
@@ -102,9 +102,7 @@ def run_subprocess(
     try:
         if pipe_output:
             process = sarge.capture_both(args, cwd=cwd, env=env, async_=True)
-            while all(
-                command.returncode is None for command in process.commands
-            ):
+            while all(command.returncode is None for command in process.commands):
                 _read_output(process=process, block=False)
                 process.poll_all()
                 time.sleep(0.05)
@@ -136,8 +134,8 @@ def run_subprocess(
                 popen_process.kill()
             raise
 
-    stdout = b''.join(stdout_list) if pipe_output else None
-    stderr = b''.join(stderr_list) if pipe_output else None
+    stdout = b"".join(stdout_list) if pipe_output else None
+    stderr = b"".join(stderr_list) if pipe_output else None
     if process.returncode != 0:
         raise subprocess.CalledProcessError(
             returncode=process.returncode,

@@ -7,7 +7,7 @@ import click
 from ._common import existing_cluster_ids
 
 
-@click.command('list')
+@click.command("list")
 def list_clusters() -> None:
     """
     List all clusters.

@@ -43,11 +43,11 @@ def destroy_cluster(
         cluster_vms.destroy()
 
 
-@click.command('destroy-list')
+@click.command("destroy-list")
 @aws_region_option
 @enable_spinner_option
 @verbosity_option
-@click.argument('cluster_ids', nargs=-1, type=str)
+@click.argument("cluster_ids", nargs=-1, type=str)
 def destroy_list(
     cluster_ids: List[str],
     enable_spinner: bool,
@@ -75,7 +75,7 @@ def destroy_list(
             continue
 
 
-@click.command('destroy')
+@click.command("destroy")
 @enable_spinner_option
 @aws_region_option
 @verbosity_option

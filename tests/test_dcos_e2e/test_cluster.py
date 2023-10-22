@@ -25,7 +25,7 @@ class TestIntegrationTests:
     Tests for running integration tests on a node.
     """
 
-    @pytest.fixture(scope='class')
+    @pytest.fixture(scope="class")
     def cluster(
         self,
         oss_installer: Path,
@@ -58,10 +58,10 @@ class TestIntegrationTests:
         cluster.wait_for_dcos_oss(http_checks=True)
         # We check that no users are added by ``wait_for_dcos_oss``.
         # If a user is added, a user cannot log in via the web UI.
-        get_users_args = ['curl', 'http://localhost:8101/acs/api/v1/users']
-        (master, ) = cluster.masters
+        get_users_args = ["curl", "http://localhost:8101/acs/api/v1/users"]
+        (master,) = cluster.masters
         result = master.run(args=get_users_args, output=Output.CAPTURE)
-        users = json.loads(result.stdout.decode())['array']
+        users = json.loads(result.stdout.decode())["array"]
         assert not users
 
     def test_run_pytest(self, cluster: Cluster) -> None:
@@ -70,7 +70,7 @@ class TestIntegrationTests:
         Errors are raised from `pytest`.
         """
         # No error is raised with a successful command.
-        pytest_command = ['pytest', '-vvv', '-s', '-x', 'test_auth.py']
+        pytest_command = ["pytest", "-vvv", "-s", "-x", "test_auth.py"]
         cluster.run_with_test_environment(
             args=pytest_command,
             output=Output.CAPTURE,
@@ -78,7 +78,7 @@ class TestIntegrationTests:
 
         # An error is raised with an unsuccessful command.
         with pytest.raises(CalledProcessError) as excinfo:
-            pytest_command = ['pytest', 'test_no_such_file.py']
+            pytest_command = ["pytest", "test_no_such_file.py"]
             result = cluster.run_with_test_environment(
                 args=pytest_command,
                 output=Output.CAPTURE,
@@ -96,8 +96,8 @@ class TestIntegrationTests:
         """
         By default commands are run on an arbitrary master node.
         """
-        (master, ) = cluster.masters
-        command = ['/opt/mesosphere/bin/detect_ip']
+        (master,) = cluster.masters
+        command = ["/opt/mesosphere/bin/detect_ip"]
         result = cluster.run_with_test_environment(args=command).stdout
         assert str(master.public_ip_address).encode() == result.strip()
 
@@ -105,8 +105,8 @@ class TestIntegrationTests:
         """
         It is possible to run commands on any node.
         """
-        (agent, ) = cluster.agents
-        command = ['/opt/mesosphere/bin/detect_ip']
+        (agent,) = cluster.agents
+        command = ["/opt/mesosphere/bin/detect_ip"]
         result = cluster.run_with_test_environment(args=command, node=agent)
         assert str(agent.public_ip_address).encode() == result.stdout.strip()
 
@@ -169,9 +169,8 @@ class TestCopyFiles:
             agents=0,
             public_agents=0,
         ) as cluster:
-
-            (master, ) = cluster.masters
-            ip_detect_file = tmp_path / 'ip-detect'
+            (master,) = cluster.masters
+            ip_detect_file = tmp_path / "ip-detect"
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
@@ -185,12 +184,12 @@ class TestCopyFiles:
                 dcos_config=cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=[
-                    (ip_detect_file, Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path("/genconf/ip-detect")),
                 ],
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
-                args=['cat', '/opt/mesosphere/bin/detect_ip'],
+                args=["cat", "/opt/mesosphere/bin/detect_ip"],
             )
             assert cat_result.stdout.decode() == ip_detect_contents
 
@@ -209,9 +208,8 @@ class TestCopyFiles:
             agents=0,
             public_agents=0,
         ) as cluster:
-
-            (master, ) = cluster.masters
-            ip_detect_file = tmp_path / 'ip-detect'
+            (master,) = cluster.masters
+            ip_detect_file = tmp_path / "ip-detect"
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
@@ -225,13 +223,13 @@ class TestCopyFiles:
                 dcos_config=cluster.base_config,
                 ip_detect_path=cluster_backend.ip_detect_path,
                 files_to_copy_to_genconf_dir=[
-                    (ip_detect_file, Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path("/genconf/ip-detect")),
                 ],
                 output=Output.LOG_AND_CAPTURE,
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
-                args=['cat', '/opt/mesosphere/bin/detect_ip'],
+                args=["cat", "/opt/mesosphere/bin/detect_ip"],
             )
             assert cat_result.stdout.decode() == ip_detect_contents
 
@@ -268,31 +266,31 @@ class TestClusterFromNodes:
             agents=1,
             public_agents=1,
         )
-        (master, ) = cluster.masters
-        (agent, ) = cluster.agents
-        (public_agent, ) = cluster.public_agents
+        (master,) = cluster.masters
+        (agent,) = cluster.agents
+        (public_agent,) = cluster.public_agents
 
         with Cluster.from_nodes(
             masters=cluster.masters,
             agents=cluster.agents,
             public_agents=cluster.public_agents,
         ) as duplicate_cluster:
-            (duplicate_master, ) = duplicate_cluster.masters
-            (duplicate_agent, ) = duplicate_cluster.agents
-            (duplicate_public_agent, ) = duplicate_cluster.public_agents
-            assert 'master_list' in duplicate_cluster.base_config
-            assert 'agent_list' in duplicate_cluster.base_config
-            assert 'public_agent_list' in duplicate_cluster.base_config
+            (duplicate_master,) = duplicate_cluster.masters
+            (duplicate_agent,) = duplicate_cluster.agents
+            (duplicate_public_agent,) = duplicate_cluster.public_agents
+            assert "master_list" in duplicate_cluster.base_config
+            assert "agent_list" in duplicate_cluster.base_config
+            assert "public_agent_list" in duplicate_cluster.base_config
 
-            duplicate_master.run(args=['touch', 'example_master_file'])
-            duplicate_agent.run(args=['touch', 'example_agent_file'])
+            duplicate_master.run(args=["touch", "example_master_file"])
+            duplicate_agent.run(args=["touch", "example_agent_file"])
             duplicate_public_agent.run(
-                args=['touch', 'example_public_agent_file'],
+                args=["touch", "example_public_agent_file"],
             )
 
-            master.run(args=['test', '-f', 'example_master_file'])
-            agent.run(args=['test', '-f', 'example_agent_file'])
-            public_agent.run(args=['test', '-f', 'example_public_agent_file'])
+            master.run(args=["test", "-f", "example_master_file"])
+            agent.run(args=["test", "-f", "example_agent_file"])
+            public_agent.run(args=["test", "-f", "example_public_agent_file"])
 
         with pytest.raises(NotImplementedError):
             duplicate_cluster.destroy()
@@ -362,7 +360,7 @@ class TestClusterFromNodes:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.')
+                assert build.version.startswith("2.")
                 assert build.commit
                 assert build.variant == DCOSVariant.OSS
 
@@ -396,7 +394,7 @@ class TestUpgrade:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.0')
+                assert build.version.startswith("2.0")
                 assert build.variant == DCOSVariant.OSS
 
             cluster.upgrade_dcos_from_path(
@@ -413,7 +411,7 @@ class TestUpgrade:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.1')
+                assert build.version.startswith("2.1")
                 assert build.variant == DCOSVariant.OSS
 
     def test_upgrade_from_url(
@@ -440,7 +438,7 @@ class TestUpgrade:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.0')
+                assert build.version.startswith("2.0")
                 assert build.variant == DCOSVariant.OSS
 
             cluster.upgrade_dcos_from_url(
@@ -457,7 +455,7 @@ class TestUpgrade:
                 *cluster.public_agents,
             }:
                 build = node.dcos_build_info()
-                assert build.version.startswith('2.1')
+                assert build.version.startswith("2.1")
                 assert build.variant == DCOSVariant.OSS
 
 
@@ -471,7 +469,7 @@ class TestDestroyNode:
         It is possible to destroy a node in the cluster.
         """
         with Cluster(cluster_backend=cluster_backend) as cluster:
-            (agent, ) = cluster.agents
+            (agent,) = cluster.agents
             cluster.destroy_node(node=agent)
             assert not cluster.agents
 
@@ -487,7 +485,7 @@ class TestInstallDCOS:
         Set the ``caplog`` logging level to ``DEBUG`` so it captures any log
         messages produced by ``dcos_e2e`` library.
         """
-        caplog.set_level(logging.DEBUG, logger='dcos_e2e')
+        caplog.set_level(logging.DEBUG, logger="dcos_e2e")
 
     def _two_masters_error_logged(
         self,
@@ -505,7 +503,7 @@ class TestInstallDCOS:
         Returns:
             Whether a particular error is logged as a WARNING message.
         """
-        message = 'Must have 1, 3, 5, 7, or 9 masters'
+        message = "Must have 1, 3, 5, 7, or 9 masters"
         debug_messages = set(
             filter(
                 lambda record: record.levelno == logging.WARNING,

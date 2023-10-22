@@ -9,10 +9,10 @@ import click
 from dcos_e2e.docker_storage_drivers import DockerStorageDriver
 
 DOCKER_STORAGE_DRIVERS = {
-    'aufs': DockerStorageDriver.AUFS,
-    'overlay': DockerStorageDriver.OVERLAY,
-    'overlay2': DockerStorageDriver.OVERLAY_2,
-    'auto': None,
+    "aufs": DockerStorageDriver.AUFS,
+    "overlay": DockerStorageDriver.OVERLAY,
+    "overlay2": DockerStorageDriver.OVERLAY_2,
+    "auto": None,
 }
 
 
@@ -31,20 +31,23 @@ def _get_docker_storage_driver(
     return DOCKER_STORAGE_DRIVERS[value]
 
 
-def docker_storage_driver_option(command: Callable[..., None],
-                                 ) -> Callable[..., None]:
+def docker_storage_driver_option(
+    command: Callable[..., None],
+) -> Callable[..., None]:
     """
     Option for choosing the Docker storage driver to use inside the container.
     """
     function = click.option(
-        '--docker-storage-driver',
+        "--docker-storage-driver",
         type=click.Choice(sorted(DOCKER_STORAGE_DRIVERS.keys())),
-        default='auto',
+        default="auto",
         show_default=True,
         help=(
-            'The storage driver to use for Docker in Docker. '
+            "The storage driver to use for Docker in Docker. "
             "By default this uses the host's driver."
         ),
         callback=_get_docker_storage_driver,
-    )(command)  # type: Callable[..., None]
+    )(
+        command
+    )  # type: Callable[..., None]
     return function

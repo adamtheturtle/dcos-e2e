@@ -7,7 +7,7 @@ from ._docker import Docker
 from ._vagrant import Vagrant
 
 __all__ = [
-    'AWS',
-    'Docker',
-    'Vagrant',
+    "AWS",
+    "Docker",
+    "Vagrant",
 ]

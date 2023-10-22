@@ -26,16 +26,14 @@ def get_version() -> str:
     starting from ``0``.
     """
     utc_now = datetime.datetime.utcnow()
-    date_format = '%Y.%m.%d'
+    date_format = "%Y.%m.%d"
     date_str = utc_now.strftime(date_format)
-    local_repository = Repo('.')
+    local_repository = Repo(".")
     tag_labels = tag_list(repo=local_repository)
     tag_labels = [item.decode() for item in tag_labels]
-    today_tag_labels = [
-        item for item in tag_labels if item.startswith(date_str)
-    ]
+    today_tag_labels = [item for item in tag_labels if item.startswith(date_str)]
     micro = int(len(today_tag_labels))
-    return '{date}.{micro}'.format(date=date_str, micro=micro)
+    return "{date}.{micro}".format(date=date_str, micro=micro)
 
 
 def update_changelog(version: str, changelog: Path) -> None:
@@ -44,8 +42,8 @@ def update_changelog(version: str, changelog: Path) -> None:
     """
     changelog_contents = changelog.read_text()
     new_changelog_contents = changelog_contents.replace(
-        'Next\n----',
-        'Next\n----\n\n{version}\n------------'.format(version=version),
+        "Next\n----",
+        "Next\n----\n\n{version}\n------------".format(version=version),
     )
     changelog.write_text(new_changelog_contents)
 
@@ -57,15 +55,15 @@ def create_github_release(
     """
     Create a tag and release on GitHub.
     """
-    changelog_url = 'https://dcos-e2e.readthedocs.io/en/latest/changelog.html'
-    release_name = 'Release ' + version
-    release_message = 'See ' + changelog_url
+    changelog_url = "https://dcos-e2e.readthedocs.io/en/latest/changelog.html"
+    release_name = "Release " + version
+    release_message = "See " + changelog_url
     github_release = repository.create_git_tag_and_release(
         tag=version,
-        tag_message='Release ' + version,
+        tag_message="Release " + version,
         release_name=release_name,
         release_message=release_message,
-        type='commit',
+        type="commit",
         object=repository.get_commits()[0].sha,
         draft=False,
     )
@@ -78,22 +76,22 @@ def create_github_release(
     #
     # One symptom of this is that ``minidcos --version`` from the PyInstaller
     # binary shows the correct version.
-    local_repository = Repo('.')
+    local_repository = Repo(".")
     client = HttpGitClient(repository.owner.html_url)
-    remote_refs = client.fetch(repository.name + '.git', local_repository)
+    remote_refs = client.fetch(repository.name + ".git", local_repository)
 
     # Update the local tags and references with the remote ones.
     for key, value in remote_refs.items():
         local_repository.refs[key] = value
 
     # Advance local HEAD to remote master HEAD.
-    local_repository[b'HEAD'] = remote_refs[b'refs/heads/master']
+    local_repository[b"HEAD"] = remote_refs[b"refs/heads/master"]
 
     # We need to make the artifacts just after creating a tag so that the
     # --version output is exactly the one of the tag.
     # No tag exists when the GitHub release is a draft.
     # This means that temporarily we have a release without binaries.
-    linux_artifacts = make_linux_binaries(repo_root=Path('.'))
+    linux_artifacts = make_linux_binaries(repo_root=Path("."))
     for installer_path in linux_artifacts:
         github_release.upload_asset(
             path=str(installer_path),
@@ -109,16 +107,16 @@ def commit_and_push(
     """
     Commit and push all changes.
     """
-    local_repository = Repo('.')
+    local_repository = Repo(".")
     _, ignored = add(paths=[str(path) for path in paths])
     assert not ignored
-    message = b'Update for release ' + version.encode('utf-8')
+    message = b"Update for release " + version.encode("utf-8")
     commit(message=message)
-    branch_name = 'master'
+    branch_name = "master"
     push(
         repo=local_repository,
         remote_location=repository.ssh_url,
-        refspecs=branch_name.encode('utf-8'),
+        refspecs=branch_name.encode("utf-8"),
     )
 
 
@@ -131,7 +129,7 @@ def update_homebrew(
     Update the Homebrew file.
     """
     archive_url = repository.get_archive_link(
-        archive_format='tarball',
+        archive_format="tarball",
         ref=version_str,
     )
 
@@ -167,12 +165,12 @@ def get_repo(github_token: str, github_owner: str) -> Repository:
     except UnknownObjectException:
         github_user_or_org = github_client.get_user(github_owner)
 
-    return github_user_or_org.get_repo('dcos-e2e')
+    return github_user_or_org.get_repo("dcos-e2e")
 
 
-@click.command('release')
-@click.argument('github_token')
-@click.argument('github_owner')
+@click.command("release")
+@click.argument("github_token")
+@click.argument("github_owner")
 def release(github_token: str, github_owner: str) -> None:
     """
     Perform a release.
@@ -180,9 +178,9 @@ def release(github_token: str, github_owner: str) -> None:
     logging.basicConfig(level=logging.DEBUG)
     repository = get_repo(github_token=github_token, github_owner=github_owner)
     version_str = get_version()
-    homebrew_file = Path('minidcos.rb')
-    vagrantfile = Path('vagrant/Vagrantfile')
-    changelog = Path('CHANGELOG.rst')
+    homebrew_file = Path("minidcos.rb")
+    vagrantfile = Path("vagrant/Vagrantfile")
+    changelog = Path("CHANGELOG.rst")
     update_changelog(version=version_str, changelog=changelog)
     update_homebrew(
         homebrew_file=homebrew_file,
@@ -195,5 +193,5 @@ def release(github_token: str, github_owner: str) -> None:
     create_github_release(repository=repository, version=version_str)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     release()

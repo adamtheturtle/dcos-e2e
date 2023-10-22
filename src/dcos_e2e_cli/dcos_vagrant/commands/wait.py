@@ -18,7 +18,7 @@ from ._common import ClusterVMs, existing_cluster_ids
 from .doctor import doctor
 
 
-@click.command('wait')
+@click.command("wait")
 @existing_cluster_id_option
 @superuser_username_option
 @superuser_password_option

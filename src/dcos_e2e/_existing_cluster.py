@@ -29,7 +29,7 @@ class ExistingCluster(ClusterBackend):
         self.public_agents = public_agents
 
     @property
-    def cluster_cls(self) -> Type['ExistingClusterManager']:
+    def cluster_cls(self) -> Type["ExistingClusterManager"]:
         """
         Return the :class:`dcos_e2e.backends.ClusterManager` class to use to
         create and manage a cluster.
@@ -117,9 +117,7 @@ class ExistingClusterManager(ClusterManager):
                     dcos_installer=dcos_installer,
                     dcos_config=dcos_config,
                     ip_detect_path=ip_detect_path,
-                    files_to_copy_to_genconf_dir=(
-                        files_to_copy_to_genconf_dir
-                    ),
+                    files_to_copy_to_genconf_dir=(files_to_copy_to_genconf_dir),
                     role=role,
                     output=output,
                 )
@@ -155,9 +153,7 @@ class ExistingClusterManager(ClusterManager):
                     dcos_installer=dcos_installer,
                     dcos_config=dcos_config,
                     ip_detect_path=ip_detect_path,
-                    files_to_copy_to_genconf_dir=(
-                        files_to_copy_to_genconf_dir
-                    ),
+                    files_to_copy_to_genconf_dir=(files_to_copy_to_genconf_dir),
                     role=role,
                     output=output,
                 )

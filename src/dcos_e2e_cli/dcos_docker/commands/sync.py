@@ -19,7 +19,7 @@ from ._common import ClusterContainers, existing_cluster_ids
 from ._options import node_transport_option
 
 
-@click.command('sync', help=SYNC_HELP)
+@click.command("sync", help=SYNC_HELP)
 @existing_cluster_id_option
 @dcos_checkout_dir_argument
 @node_transport_option

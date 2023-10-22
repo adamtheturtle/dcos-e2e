@@ -23,7 +23,7 @@ class Iam(helpers.ApiClientSession):
             self.session = session
 
     def create_service(self, uid: str, pubkey: str, description: str):
-        """ creates a service user
+        """creates a service user
 
         :param uid: ID for the new service
         :type uid: str
@@ -34,11 +34,8 @@ class Iam(helpers.ApiClientSession):
 
         :returns: None
         """
-        data = {
-            'description': description,
-            'public_key': pubkey
-        }
-        r = self.put('/users/{}'.format(uid), json=data)
+        data = {"description": description, "public_key": pubkey}
+        r = self.put("/users/{}".format(uid), json=data)
         assert r.status_code == 201
 
     def delete_service(self, uid: str) -> None:
@@ -50,17 +47,17 @@ class Iam(helpers.ApiClientSession):
         Raises:
             AssertionError: The delete operation does not succeed.
         """
-        resp = self.delete('/users/{}'.format(uid))
+        resp = self.delete("/users/{}".format(uid))
         assert resp.status_code == 204
 
         # Verify that service does not appear in collection anymore.
-        resp = self.get('/users', query='type=service')
+        resp = self.get("/users", query="type=service")
         resp.raise_for_status()
-        uids = [account['uid'] for account in resp.json()['array']]
+        uids = [account["uid"] for account in resp.json()["array"]]
         assert uid not in uids
 
     def grant_user_permission(self, uid: str, action: str, rid: str) -> None:
-        """ Will grant a user with an action for a given RID
+        """Will grant a user with an action for a given RID
 
         :param uid: ID of the user that this permission will be granted to
         :type uid: str
@@ -69,13 +66,16 @@ class Iam(helpers.ApiClientSession):
         :param rid: resource ID that the user will be granted the action to
         :type rid: str
         """
-        rid = rid.replace('/', '%252F')
-        r = self.put('/acls/{}/users/{}/{}'.format(rid, uid, action))
-        assert r.status_code == 204, ('Permission was not granted. Code: {}. '
-                                      'Content {}'.format(r.status_code, r.content.decode()))
+        rid = rid.replace("/", "%252F")
+        r = self.put("/acls/{}/users/{}/{}".format(rid, uid, action))
+        assert (
+            r.status_code == 204
+        ), "Permission was not granted. Code: {}. " "Content {}".format(
+            r.status_code, r.content.decode()
+        )
 
     def delete_user_permission(self, uid: str, action: str, rid: str) -> None:
-        """ Will delete permission for a user for an action for a given RID
+        """Will delete permission for a user for an action for a given RID
 
         :param uid: ID of the user that this permission will be deleted from
         :type uid: str
@@ -84,36 +84,36 @@ class Iam(helpers.ApiClientSession):
         :param rid: resource ID that the user will be removed from for the given action
         :type rid: str
         """
-        rid = rid.replace('/', '%252F')
-        rid = rid.replace('/', '%252F')
-        r = self.delete('/acls/{}/users/{}/{}'.format(rid, uid, action))
+        rid = rid.replace("/", "%252F")
+        rid = rid.replace("/", "%252F")
+        r = self.delete("/acls/{}/users/{}/{}".format(rid, uid, action))
         assert r.status_code == 204
 
     def create_acl(self, rid: str, description: str) -> None:
-        """ creates an ACL
+        """creates an ACL
 
         :param rid: RID for the ACL to be created
         :type rid: str
         :param description: text description for the new RID
         :type description: str
         """
-        rid = rid.replace('/', '%252F')
+        rid = rid.replace("/", "%252F")
         # Create ACL if it does not yet exist.
-        r = self.put('/acls/{}'.format(rid), json={'description': description})
+        r = self.put("/acls/{}".format(rid), json={"description": description})
         assert r.status_code == 201 or r.status_code == 409
 
     def delete_acl(self, rid: str) -> None:
-        """ Deletes an ACL
+        """Deletes an ACL
 
         :param rid: RID for the ACL to be deleted
         :type rid: str
         """
-        rid = rid.replace('/', '%252F')
-        r = self.delete('/acls/{}'.format(rid))
+        rid = rid.replace("/", "%252F")
+        r = self.delete("/acls/{}".format(rid))
         assert r.status_code == 204
 
     def make_service_account_credentials(self, uid, privkey) -> dict:
-        """ Generates the JSON object to post to create a service account
+        """Generates the JSON object to post to create a service account
 
         :param uid: ID for the service account to be created
         :type uid: str
@@ -123,8 +123,8 @@ class Iam(helpers.ApiClientSession):
         :returns: JSON-like dict to POST to IAM service
         """
         return {
-            'scheme': 'RS256',
-            'uid': uid,
-            'login_endpoint': str(self.default_url) + '/auth/login',
-            'private_key': privkey
+            "scheme": "RS256",
+            "uid": uid,
+            "login_endpoint": str(self.default_url) + "/auth/login",
+            "private_key": privkey,
         }

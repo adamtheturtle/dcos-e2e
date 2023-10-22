@@ -46,7 +46,7 @@ def cluster_install_dcos_from_path(
         enable_spinner: Whether to enable the spinner animation.
     """
     spinner = Halo(enabled=enable_spinner)
-    spinner.start('Installing DC/OS')
+    spinner.start("Installing DC/OS")
 
     # We allow a cluster to be passed in rather than just inferring it from
     # ``cluster_representation`` in case the ``cluster`` has a more efficient
@@ -63,7 +63,7 @@ def cluster_install_dcos_from_path(
         )
     except subprocess.CalledProcessError as exc:
         spinner.stop()
-        click.echo('Error installing DC/OS.', err=True)
+        click.echo("Error installing DC/OS.", err=True)
         show_calledprocess_error(exc=exc)
         click.echo(doctor_message)
         cluster_representation.destroy()
@@ -99,7 +99,7 @@ def cluster_install_dcos_from_url(
         enable_spinner: Whether to enable the spinner animation.
     """
     spinner = Halo(enabled=enable_spinner)
-    spinner.start('Installing DC/OS')
+    spinner.start("Installing DC/OS")
 
     # We allow a cluster to be passed in rather than just inferring it from
     # ``cluster_representation`` in case the ``cluster`` has a more efficient
@@ -116,7 +116,7 @@ def cluster_install_dcos_from_url(
         )
     except subprocess.CalledProcessError as exc:
         spinner.stop()
-        click.echo('Error installing DC/OS.', err=True)
+        click.echo("Error installing DC/OS.", err=True)
         show_calledprocess_error(exc=exc)
         click.echo(doctor_message)
         cluster_representation.destroy()
@@ -152,12 +152,12 @@ def run_post_install_steps(
         enable_spinner: Whether to enable the spinner animation.
     """
     superuser_username = dcos_config.get(
-        'superuser_username',
+        "superuser_username",
         DEFAULT_SUPERUSER_USERNAME,
     )
 
     superuser_password = dcos_config.get(
-        'superuser_password',
+        "superuser_password",
         DEFAULT_SUPERUSER_PASSWORD,
     )
 
@@ -176,7 +176,7 @@ def run_post_install_steps(
     cluster_started_message = (
         'Cluster "{cluster_id}" has started. '
         'Run "{wait_command_name} --cluster-id {cluster_id}" to wait for '
-        'DC/OS to become ready.'
+        "DC/OS to become ready."
     ).format(
         cluster_id=cluster_id,
         wait_command_name=wait_command_name,

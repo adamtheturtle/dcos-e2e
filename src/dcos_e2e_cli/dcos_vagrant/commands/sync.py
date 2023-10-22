@@ -17,7 +17,7 @@ from dcos_e2e_cli.common.utils import check_cluster_id_exists
 from ._common import ClusterVMs, existing_cluster_ids
 
 
-@click.command('sync', help=SYNC_HELP)
+@click.command("sync", help=SYNC_HELP)
 @existing_cluster_id_option
 @dcos_checkout_dir_argument
 @verbosity_option

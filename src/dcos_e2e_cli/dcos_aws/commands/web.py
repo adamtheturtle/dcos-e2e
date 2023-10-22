@@ -15,7 +15,7 @@ from ._common import ClusterInstances, existing_cluster_ids
 from ._options import aws_region_option
 
 
-@click.command('web')
+@click.command("web")
 @existing_cluster_id_option
 @aws_region_option
 @verbosity_option

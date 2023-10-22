@@ -26,7 +26,7 @@ class TestHelp:
     """
 
     @pytest.mark.parametrize(
-        'command',
+        "command",
         _COMMANDS,
         ids=[str(cmd) for cmd in _COMMANDS],
     )
@@ -39,17 +39,17 @@ class TestHelp:
         ``bash admin/update_cli_tests.sh``.
         """
         runner = CliRunner()
-        arguments = ['vagrant'] + command + ['--help']
+        arguments = ["vagrant"] + command + ["--help"]
         result = runner.invoke(minidcos, arguments, catch_exceptions=False)
         assert result.exit_code == 0
-        help_output_filename = '-'.join(['dcos-vagrant'] + command) + '.txt'
-        help_outputs_dir = Path(__file__).parent / 'help_outputs'
+        help_output_filename = "-".join(["dcos-vagrant"] + command) + ".txt"
+        help_outputs_dir = Path(__file__).parent / "help_outputs"
         expected_help_file = help_outputs_dir / help_output_filename
         try:
             expected_help = expected_help_file.read_text()
             assert result.output == expected_help
         except (AssertionError, FileNotFoundError):  # pragma: no cover
-            if os.getenv('FIX_CLI_TESTS') == '1':
+            if os.getenv("FIX_CLI_TESTS") == "1":
                 help_outputs_dir.mkdir(exist_ok=True)
                 expected_help_file.touch()
                 expected_help_file.write_text(result.output)
@@ -63,12 +63,12 @@ class TestDoctor:
     """
 
     @pytest.mark.skipif(
-        os.environ.get('TRAVIS') == 'true',
-        reason='It is not possible to run VirtualBox on Travis CI',
+        os.environ.get("TRAVIS") == "true",
+        reason="It is not possible to run VirtualBox on Travis CI",
     )
     @pytest.mark.skipif(
-        os.environ.get('GITHUB_ACTIONS') == 'true',
-        reason='It is not possible to run VirtualBox on GitHub Actions',
+        os.environ.get("GITHUB_ACTIONS") == "true",
+        reason="It is not possible to run VirtualBox on GitHub Actions",
     )
     def test_doctor(self) -> None:  # pragma: no cover
         """
@@ -77,7 +77,7 @@ class TestDoctor:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['vagrant', 'doctor'],
+            ["vagrant", "doctor"],
             catch_exceptions=False,
         )
         assert result.exit_code == 0

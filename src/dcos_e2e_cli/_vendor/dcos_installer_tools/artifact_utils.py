@@ -66,10 +66,10 @@ def get_dcos_installer_details(
         ValueError: A space is in the installer path.
         CalledProcessError: There was an error extracting the given installer.
     """
-    if ' ' in str(installer):
+    if " " in str(installer):
         message = (
-            'No spaces allowed in path to the installer. '
-            'See https://jira.d2iq.com/browse/DCOS_OSS-4429.'
+            "No spaces allowed in path to the installer. "
+            "See https://jira.d2iq.com/browse/DCOS_OSS-4429."
         )
         raise ValueError(message)
 
@@ -101,7 +101,7 @@ def get_dcos_installer_details(
     #
     # Therefore we use the installer twice to eliminate all non-JSON text.
 
-    version_args = ['bash', str(installer), '--version']
+    version_args = ["bash", str(installer), "--version"]
 
     subprocess.check_output(
         args=version_args,
@@ -117,11 +117,11 @@ def get_dcos_installer_details(
 
     version_info = json.loads(result.decode())
 
-    version = version_info['version']
+    version = version_info["version"]
     variant = {
-        'ee': DCOSVariant.ENTERPRISE,
-        '': DCOSVariant.OSS,
-    }[version_info['variant']]
+        "ee": DCOSVariant.ENTERPRISE,
+        "": DCOSVariant.OSS,
+    }[version_info["variant"]]
 
     if not keep_extracted:
         shutil.rmtree(path=str(workspace_dir))

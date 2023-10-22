@@ -14,14 +14,14 @@ from ._common import (
 from ._loopback_sidecars import loopback_sidecars_by_name
 
 
-@click.command('create-loopback-sidecar')
+@click.command("create-loopback-sidecar")
 @click.option(
-    '--size',
+    "--size",
     type=click.IntRange(min=1),
     default=256,
-    help='Size (in Megabytes) of the block device.',
+    help="Size (in Megabytes) of the block device.",
 )
-@click.argument('name', type=str, required=True)
+@click.argument("name", type=str, required=True)
 def create_loopback_sidecar(size: int, name: str) -> None:
     """
     Create a loopback sidecar.

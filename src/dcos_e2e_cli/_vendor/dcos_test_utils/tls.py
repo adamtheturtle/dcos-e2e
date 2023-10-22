@@ -43,33 +43,34 @@ def load_pem_x509_cert(cert_pem, allow_ec_cert=True):
         CertValidationError
     """
 
-    if cert_pem.count('BEGIN CERTIFICATE') > 1:
+    if cert_pem.count("BEGIN CERTIFICATE") > 1:
         raise CertValidationError(
-            'Certificate data contains more than one certificate definition.')
+            "Certificate data contains more than one certificate definition."
+        )
 
     try:
         cert = x509.load_pem_x509_certificate(
-            data=cert_pem.encode('utf-8'),
-            backend=cryptography_default_backend
-            )
+            data=cert_pem.encode("utf-8"), backend=cryptography_default_backend
+        )
     except ValueError as e:
-        raise CertValidationError('Invalid certificate: %s' % e)
+        raise CertValidationError("Invalid certificate: %s" % e)
 
     public_key = cert.public_key()
 
-    supported_keys = OrderedDict([(rsa.RSAPublicKey, 'RSA')])
+    supported_keys = OrderedDict([(rsa.RSAPublicKey, "RSA")])
     if allow_ec_cert:
-        supported_keys[ec.EllipticCurvePublicKey] = 'EC'
+        supported_keys[ec.EllipticCurvePublicKey] = "EC"
 
     if not isinstance(public_key, tuple(supported_keys.keys())):
         names = list(supported_keys.values())
         if len(names) > 1:
-            names_str = ', '.join(names[:-1]) + ' or ' + names[-1]
+            names_str = ", ".join(names[:-1]) + " or " + names[-1]
         else:
             names_str = names[0]
 
         raise CertValidationError(
-            'Unexpected public key type (not {})'.format(names_str))
+            "Unexpected public key type (not {})".format(names_str)
+        )
 
     return cert
 
@@ -86,15 +87,15 @@ def cert_key_usage(**kwargs):
         x509.KeyUsage
     """
     required = [
-        'digital_signature',
-        'content_commitment',
-        'key_encipherment',
-        'data_encipherment',
-        'key_agreement',
-        'key_cert_sign',
-        'crl_sign',
-        'encipher_only',
-        'decipher_only',
+        "digital_signature",
+        "content_commitment",
+        "key_encipherment",
+        "data_encipherment",
+        "key_agreement",
+        "key_cert_sign",
+        "crl_sign",
+        "encipher_only",
+        "decipher_only",
     ]
     for name in required:
         kwargs.setdefault(name, False)
@@ -113,9 +114,9 @@ def cert_extended_key_usage(**kwargs):
         x509.ExtendedKeyUsage
     """
     usages = {
-        'server_auth': x509.oid.ExtendedKeyUsageOID.SERVER_AUTH,
-        'client_auth': x509.oid.ExtendedKeyUsageOID.CLIENT_AUTH,
-        'code_signing': x509.oid.ExtendedKeyUsageOID.CODE_SIGNING,
+        "server_auth": x509.oid.ExtendedKeyUsageOID.SERVER_AUTH,
+        "client_auth": x509.oid.ExtendedKeyUsageOID.CLIENT_AUTH,
+        "code_signing": x509.oid.ExtendedKeyUsageOID.CODE_SIGNING,
         # ... and others, which we do not need. Check e.g.
         # https://cryptography.io/en/latest/_modules/cryptography/x509/oid/#ExtendedKeyUsageOID
         # for details.
@@ -133,28 +134,28 @@ def cert_name(common_name):
     """
     Create x509.Name
     """
-    return x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "D2iQ, Inc."),
-        x509.NameAttribute(NameOID.COMMON_NAME, common_name),
-        ])
+    return x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "D2iQ, Inc."),
+            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+        ]
+    )
 
 
 def ca_cert_builder(
-        public_key,
-        common_name="Root CA",
-        issuer=None,
-        basic_constraints=x509.BasicConstraints(
-            ca=True, path_length=None),
-        key_usage=cert_key_usage(
-            key_cert_sign=True),
-        subject_alternative_names=None,
-        not_valid_before=None,
-        not_valid_after=None,
-        valid_days=3650,
-        ):
+    public_key,
+    common_name="Root CA",
+    issuer=None,
+    basic_constraints=x509.BasicConstraints(ca=True, path_length=None),
+    key_usage=cert_key_usage(key_cert_sign=True),
+    subject_alternative_names=None,
+    not_valid_before=None,
+    not_valid_after=None,
+    valid_days=3650,
+):
     return cert_builder(
         public_key=public_key,
         common_name=common_name,
@@ -169,21 +170,21 @@ def ca_cert_builder(
 
 
 def external_cert_builder(
-        public_key,
-        common_name="Web Server Cert",
-        issuer=None,
-        basic_constraints=x509.BasicConstraints(
-            ca=False, path_length=None),
-        key_usage=cert_key_usage(
-            key_cert_sign=False, digital_signature=True, key_encipherment=True),
-        extended_key_usage=cert_extended_key_usage(server_auth=True),
-        subject_alternative_names=[
-            x509.DNSName('maryna.example.com'),
-        ],
-        not_valid_before=None,
-        not_valid_after=None,
-        valid_days=3650,
-        ):
+    public_key,
+    common_name="Web Server Cert",
+    issuer=None,
+    basic_constraints=x509.BasicConstraints(ca=False, path_length=None),
+    key_usage=cert_key_usage(
+        key_cert_sign=False, digital_signature=True, key_encipherment=True
+    ),
+    extended_key_usage=cert_extended_key_usage(server_auth=True),
+    subject_alternative_names=[
+        x509.DNSName("maryna.example.com"),
+    ],
+    not_valid_before=None,
+    not_valid_after=None,
+    valid_days=3650,
+):
     return cert_builder(
         public_key=public_key,
         common_name=common_name,
@@ -199,17 +200,17 @@ def external_cert_builder(
 
 
 def cert_builder(
-        public_key,
-        common_name="Root CA",
-        issuer=None,
-        basic_constraints=x509.BasicConstraints(ca=True, path_length=None),
-        key_usage=None,
-        extended_key_usage=None,
-        subject_alternative_names=None,
-        not_valid_before=None,
-        not_valid_after=None,
-        valid_days=3650,
-        ):
+    public_key,
+    common_name="Root CA",
+    issuer=None,
+    basic_constraints=x509.BasicConstraints(ca=True, path_length=None),
+    key_usage=None,
+    extended_key_usage=None,
+    subject_alternative_names=None,
+    not_valid_before=None,
+    not_valid_after=None,
+    valid_days=3650,
+):
     """
     Create cert builder with some sensible defaults.
 
@@ -241,18 +242,14 @@ def cert_builder(
     if issuer is None:
         issuer = subject
 
-    builder = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        public_key
-    ).not_valid_before(
-        not_valid_before
-    ).not_valid_after(
-        not_valid_after
-    ).serial_number(
-        int(uuid.uuid4())
+    builder = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(public_key)
+        .not_valid_before(not_valid_before)
+        .not_valid_after(not_valid_after)
+        .serial_number(int(uuid.uuid4()))
     )
 
     if basic_constraints:
@@ -266,8 +263,7 @@ def cert_builder(
 
     if subject_alternative_names is not None:
         builder = builder.add_extension(
-            x509.SubjectAlternativeName(subject_alternative_names),
-            critical=True
+            x509.SubjectAlternativeName(subject_alternative_names), critical=True
         )
 
     return builder
@@ -283,7 +279,7 @@ def serialize_cert_to_pem(cert):
     Return:
         PEM text representing serialized certificate.
     """
-    return cert.public_bytes(encoding=serialization.Encoding.PEM).decode('utf-8')
+    return cert.public_bytes(encoding=serialization.Encoding.PEM).decode("utf-8")
 
 
 def serialize_cert_chain_to_pem(chain):
@@ -296,7 +292,7 @@ def serialize_cert_chain_to_pem(chain):
     Return:
         PEM text representing serialized certificate.
     """
-    return ''.join([serialize_cert_to_pem(cert) for cert in chain])
+    return "".join([serialize_cert_to_pem(cert) for cert in chain])
 
 
 def common_names(cert):
@@ -304,8 +300,8 @@ def common_names(cert):
 
 
 def generate_root_ca_and_intermediate_ca(
-        number=1,
-        ):
+    number=1,
+):
     """
     Helper to create root CA cert and intermediate certs.
 
@@ -322,9 +318,8 @@ def generate_root_ca_and_intermediate_ca(
 
     root_ca_private_key = generate_rsa_private_key()
     root_ca = sign_cert_builder(
-        ca_cert_builder(root_ca_private_key.public_key()),
-        root_ca_private_key
-        )
+        ca_cert_builder(root_ca_private_key.public_key()), root_ca_private_key
+    )
     chain.append((root_ca, root_ca_private_key))
 
     parent, parent_private_key = root_ca, root_ca_private_key
@@ -335,8 +330,8 @@ def generate_root_ca_and_intermediate_ca(
                 intermediate_ca_private_key.public_key(),
                 common_name="Intermediate CA {}".format(i),
                 issuer=parent.subject,
-                ),
-            parent_private_key
+            ),
+            parent_private_key,
         )
         chain.append((intermediate_ca, intermediate_ca_private_key))
         parent, parent_private_key = intermediate_ca, intermediate_ca_private_key
@@ -358,8 +353,8 @@ def generate_rsa_private_key(key_size=2048, public_exponent=65537):
     return rsa.generate_private_key(
         public_exponent=public_exponent,
         key_size=key_size,
-        backend=cryptography_default_backend
-        )
+        backend=cryptography_default_backend,
+    )
 
 
 def generate_ec_private_key(curve=None):
@@ -373,10 +368,7 @@ def generate_ec_private_key(curve=None):
         ec.EllipticCurvePrivateKey
     """
     curve = ec.SECP384R1() if curve is None else curve
-    return ec.generate_private_key(
-        curve=curve,
-        backend=cryptography_default_backend
-        )
+    return ec.generate_private_key(curve=curve, backend=cryptography_default_backend)
 
 
 def generate_dsa_private_key(key_size=1024):
@@ -390,9 +382,8 @@ def generate_dsa_private_key(key_size=1024):
         ec.DSAPrivateKey
     """
     return dsa.generate_private_key(
-        key_size=key_size,
-        backend=cryptography_default_backend
-        )
+        key_size=key_size, backend=cryptography_default_backend
+    )
 
 
 def sign_cert_builder(cert_builder, private_key, alg=None):
@@ -409,10 +400,8 @@ def sign_cert_builder(cert_builder, private_key, alg=None):
     """
     alg = alg if alg else hashes.SHA256()
     return cert_builder.sign(
-        private_key=private_key,
-        algorithm=alg,
-        backend=cryptography_default_backend
-        )
+        private_key=private_key, algorithm=alg, backend=cryptography_default_backend
+    )
 
 
 def serialize_key_to_pem(key):
@@ -428,8 +417,8 @@ def serialize_key_to_pem(key):
     return key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption()
-        ).decode('utf-8')
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
 
 
 def generate_valid_root_ca_cert_pem(private_key):
@@ -448,6 +437,6 @@ def generate_valid_root_ca_cert_pem(private_key):
             ca_cert_builder(
                 private_key.public_key(),
             ),
-            private_key
-            )
+            private_key,
         )
+    )

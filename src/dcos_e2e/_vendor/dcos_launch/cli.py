@@ -37,6 +37,7 @@ import sys
 from .. import dcos_launch
 from .. import dcos_launch
 from ..dcos_launch import config as ___vendorize__0
+
 dcos_launch.config = ___vendorize__0
 from ..dcos_launch import util
 from ..dcos_test_utils import logger
@@ -44,72 +45,84 @@ from docopt import docopt
 
 
 def do_main(args):
-    logger.setup(args['--log-level'].upper(), noisy_modules=['googleapiclient', 'oauth2client'])
+    logger.setup(
+        args["--log-level"].upper(), noisy_modules=["googleapiclient", "oauth2client"]
+    )
 
-    if args['create']:
-        config = dcos_launch.config.get_validated_config_from_path(args['--config-path'])
-        info_path = args['--info-path']
+    if args["create"]:
+        config = dcos_launch.config.get_validated_config_from_path(
+            args["--config-path"]
+        )
+        info_path = args["--info-path"]
         if os.path.exists(info_path):
             raise dcos_launch.util.LauncherError(
-                'InputConflict',  '{} already exists! Delete this or specify a '
-                'different cluster info path with the -i option'.format(info_path))
+                "InputConflict",
+                "{} already exists! Delete this or specify a "
+                "different cluster info path with the -i option".format(info_path),
+            )
         launcher = dcos_launch.get_launcher(config)
         cluster_info = launcher.create()
         util.write_json(info_path, cluster_info)
-        create_exception = getattr(launcher, 'create_exception', None)
+        create_exception = getattr(launcher, "create_exception", None)
         if create_exception:
             raise create_exception
         return 0
 
     try:
-        info = util.load_json(args['--info-path'])
+        info = util.load_json(args["--info-path"])
     except FileNotFoundError as ex:
-        raise dcos_launch.util.LauncherError('MissingInfoJSON', None) from ex
+        raise dcos_launch.util.LauncherError("MissingInfoJSON", None) from ex
 
     launcher = dcos_launch.get_launcher(info)
 
-    if args['wait']:
+    if args["wait"]:
         launcher.wait()
         launcher.install_dcos()
-        print('Cluster is ready!')
+        print("Cluster is ready!")
         return 0
 
-    if args['describe']:
+    if args["describe"]:
         print(util.json_prettyprint(launcher.describe()))
         return 0
 
-    if args['pytest']:
+    if args["pytest"]:
         var_list = list()
-        if args['--env'] is not None:
-            if '=' in args['--env']:
+        if args["--env"] is not None:
+            if "=" in args["--env"]:
                 # User is attempting to do an assignment with the option
                 raise dcos_launch.util.LauncherError(
-                    'OptionError', "The '--env' option can only pass through environment variables "
-                    "from the current environment. Set variables according to the shell being used.")
-            var_list = args['--env'].split(',')
+                    "OptionError",
+                    "The '--env' option can only pass through environment variables "
+                    "from the current environment. Set variables according to the shell being used.",
+                )
+            var_list = args["--env"].split(",")
             missing = [v for v in var_list if v not in os.environ]
             if len(missing) > 0:
                 raise dcos_launch.util.LauncherError(
-                    'MissingInput', 'Environment variable arguments have been indicated '
-                    'but not set: {}'.format(repr(missing)))
+                    "MissingInput",
+                    "Environment variable arguments have been indicated "
+                    "but not set: {}".format(repr(missing)),
+                )
         env_dict = {e: os.environ[e] for e in var_list}
-        return launcher.test(args['<pytest_extras>'], env_dict)
+        return launcher.test(args["<pytest_extras>"], env_dict)
 
-    if args['delete']:
+    if args["delete"]:
         launcher.delete()
         return 0
 
 
 def main(argv=None):
-    args = docopt(__doc__, argv=argv, version='dcos-launch {}'.format(dcos_launch.VERSION))
+    args = docopt(
+        __doc__, argv=argv, version="dcos-launch {}".format(dcos_launch.VERSION)
+    )
 
     try:
         return do_main(args)
     except dcos_launch.util.LauncherError as ex:
-        print('DC/OS Launch encountered an error!')
+        print("DC/OS Launch encountered an error!")
         print(repr(ex))
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

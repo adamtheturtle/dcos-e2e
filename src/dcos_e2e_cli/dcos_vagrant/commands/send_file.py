@@ -21,12 +21,12 @@ from ._nodes import node_option
 from .inspect_cluster import inspect_cluster
 
 
-@click.command('send-file')
+@click.command("send-file")
 @existing_cluster_id_option
 @node_option
 @verbosity_option
-@click.argument('source', type=click_pathlib.Path(exists=True))
-@click.argument('destination', type=click_pathlib.Path())
+@click.argument("source", type=click_pathlib.Path(exists=True))
+@click.argument("destination", type=click_pathlib.Path())
 @click.pass_context
 def send_file(
     ctx: click.core.Context,

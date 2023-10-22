@@ -28,9 +28,9 @@ class Role(Enum):
     Roles of DC/OS nodes.
     """
 
-    MASTER = 'master'
-    AGENT = 'slave'
-    PUBLIC_AGENT = 'slave_public'
+    MASTER = "master"
+    AGENT = "slave"
+    PUBLIC_AGENT = "slave_public"
 
 
 class DCOSVariant(Enum):
@@ -161,7 +161,7 @@ class Node:
 
         Returns the custom string representation of a `Node` object.
         """
-        return 'Node(public_ip={public_ip}, private_ip={private_ip})'.format(
+        return "Node(public_ip={public_ip}, private_ip={private_ip})".format(
             public_ip=self.public_ip_address,
             private_ip=self.private_ip_address,
         )
@@ -479,10 +479,10 @@ class Node:
         env = dict(env or {})
 
         if shell:
-            args = ['/bin/sh', '-c', ' '.join(args)]
+            args = ["/bin/sh", "-c", " ".join(args)]
 
         if sudo:
-            args = ['sudo'] + args
+            args = ["sudo"] + args
 
         if user is None:
             user = self.default_user
@@ -503,8 +503,8 @@ class Node:
         }[output]
 
         if log_output_live:
-            log_msg = 'Running command `{cmd}` on a node `{node}`'.format(
-                cmd=' '.join(args),
+            log_msg = "Running command `{cmd}` on a node `{node}`".format(
+                cmd=" ".join(args),
                 node=str(self),
             )
             LOGGER.debug(log_msg)
@@ -552,7 +552,7 @@ class Node:
         """
         env = dict(env or {})
         if shell:
-            args = ['/bin/sh', '-c', ' '.join(args)]
+            args = ["/bin/sh", "-c", " ".join(args)]
 
         if user is None:
             user = self.default_user
@@ -593,7 +593,7 @@ class Node:
 
         transport = transport or self.default_transport
         node_transport = self._get_node_transport(transport=transport)
-        mkdir_args = ['mkdir', '--parents', str(remote_path.parent)]
+        mkdir_args = ["mkdir", "--parents", str(remote_path.parent)]
         self.run(
             args=mkdir_args,
             user=user,
@@ -601,7 +601,7 @@ class Node:
             sudo=sudo,
         )
 
-        stat_cmd = ['stat', '-c', '"%U"', str(remote_path.parent)]
+        stat_cmd = ["stat", "-c", '"%U"', str(remote_path.parent)]
         stat_result = self.run(
             args=stat_cmd,
             shell=True,
@@ -612,7 +612,7 @@ class Node:
 
         original_parent = stat_result.stdout.decode().strip()
 
-        chown_args = ['chown', user, str(remote_path.parent)]
+        chown_args = ["chown", user, str(remote_path.parent)]
         self.run(
             args=chown_args,
             user=user,
@@ -621,23 +621,27 @@ class Node:
         )
 
         tempdir = Path(gettempdir())
-        tar_name = '{unique}.tar'.format(unique=uuid.uuid4().hex)
+        tar_name = "{unique}.tar".format(unique=uuid.uuid4().hex)
         local_tar_path = tempdir / tar_name
 
-        is_dir = self.run(
-            args=[
-                'python',
-                '-c',
-                '"import os; print(os.path.isdir(\'{remote_path}\'))"'.format(
-                    remote_path=remote_path,
-                ),
-            ],
-            shell=True,
-        ).stdout.decode().strip()
+        is_dir = (
+            self.run(
+                args=[
+                    "python",
+                    "-c",
+                    "\"import os; print(os.path.isdir('{remote_path}'))\"".format(
+                        remote_path=remote_path,
+                    ),
+                ],
+                shell=True,
+            )
+            .stdout.decode()
+            .strip()
+        )
 
-        with tarfile.open(str(local_tar_path), 'w', dereference=True) as tar:
+        with tarfile.open(str(local_tar_path), "w", dereference=True) as tar:
             arcname = Path(remote_path.name)
-            if is_dir == 'True':
+            if is_dir == "True":
                 arcname = arcname / local_path.name
             tar.add(str(local_path), arcname=str(arcname), recursive=True)
 
@@ -646,13 +650,17 @@ class Node:
         # on the Docker backend.
         # Copying files to tmpfs mounts fails silently.
         # See https://github.com/moby/moby/issues/22020.
-        home_path = self.run(
-            args=['echo', '$HOME'],
-            user=user,
-            transport=transport,
-            sudo=False,
-            shell=True,
-        ).stdout.strip().decode()
+        home_path = (
+            self.run(
+                args=["echo", "$HOME"],
+                user=user,
+                transport=transport,
+                sudo=False,
+                shell=True,
+            )
+            .stdout.strip()
+            .decode()
+        )
         # Therefore, we create a temporary file within our home directory.
         # We then remove the temporary file at the end of this function.
 
@@ -669,10 +677,10 @@ class Node:
         Path(local_tar_path).unlink()
 
         tar_args = [
-            'tar',
-            '-C',
+            "tar",
+            "-C",
             str(remote_path.parent),
-            '-xvf',
+            "-xvf",
             str(remote_tar_path),
         ]
         self.run(
@@ -682,7 +690,7 @@ class Node:
             sudo=False,
         )
 
-        chown_args = ['chown', original_parent, str(remote_path.parent)]
+        chown_args = ["chown", original_parent, str(remote_path.parent)]
         self.run(
             args=chown_args,
             user=user,
@@ -691,7 +699,7 @@ class Node:
         )
 
         self.run(
-            args=['rm', str(remote_tar_path)],
+            args=["rm", str(remote_tar_path)],
             user=user,
             transport=transport,
             sudo=sudo,
@@ -721,7 +729,7 @@ class Node:
         transport = self.default_transport
         try:
             self.run(
-                args=['test', '-e', str(remote_path)],
+                args=["test", "-e", str(remote_path)],
                 user=user,
                 transport=transport,
                 sudo=False,
@@ -729,14 +737,14 @@ class Node:
         except subprocess.CalledProcessError:
             message = (
                 'Failed to download file from remote location "{location}". '
-                'File does not exist.'
+                "File does not exist."
             ).format(location=remote_path)
             raise ValueError(message)
 
         if local_path.exists() and local_path.is_file():
             message = (
                 'Failed to download a file to "{file}". '
-                'A file already exists in that location.'
+                "A file already exists in that location."
             ).format(file=local_path)
             raise ValueError(message)
 
@@ -769,17 +777,17 @@ class Node:
             DCOSNotInstalledError: The DC/OS build information is not available
                 because DC/OS is not installed on the ``Node``.
         """
-        build_info_remote_path = Path('/opt/mesosphere/etc/dcos-version.json')
+        build_info_remote_path = Path("/opt/mesosphere/etc/dcos-version.json")
 
         try:
             self.run(
-                args=['test', '-e', str(build_info_remote_path)],
+                args=["test", "-e", str(build_info_remote_path)],
                 transport=transport,
             )
         except subprocess.CalledProcessError:
             raise DCOSNotInstalledError
 
-        get_build_info_args = ['cat', str(build_info_remote_path)]
+        get_build_info_args = ["cat", str(build_info_remote_path)]
         result = self.run(
             args=get_build_info_args,
             transport=transport,
@@ -787,12 +795,12 @@ class Node:
         build_info = json.loads(result.stdout.decode())
 
         # Work around ``dcos-variant`` missing before DC/OS 1.12.
-        if 'dcos-variant' not in build_info:
+        if "dcos-variant" not in build_info:
             full_config_remote_path = Path(
-                '/opt/mesosphere/etc/expanded.config.full.json',
+                "/opt/mesosphere/etc/expanded.config.full.json",
             )
             get_bootstrap_config_args = [
-                'cat',
+                "cat",
                 str(full_config_remote_path),
             ]
             result = self.run(
@@ -800,19 +808,19 @@ class Node:
                 transport=transport,
             )
             full_config = json.loads(result.stdout.decode())
-            if 'security' in full_config:
-                build_info['dcos-variant'] = 'enterprise'
+            if "security" in full_config:
+                build_info["dcos-variant"] = "enterprise"
             else:
-                build_info['dcos-variant'] = 'open'
+                build_info["dcos-variant"] = "open"
 
         variant_map = {
-            'open': DCOSVariant.OSS,
-            'enterprise': DCOSVariant.ENTERPRISE,
+            "open": DCOSVariant.OSS,
+            "enterprise": DCOSVariant.ENTERPRISE,
         }
         return DCOSBuildInfo(
-            version=build_info['version'],
-            commit=build_info['dcos-image-commit'],
-            variant=variant_map[build_info['dcos-variant']],
+            version=build_info["version"],
+            commit=build_info["dcos-image-commit"],
+            variant=variant_map[build_info["dcos-variant"]],
         )
 
 
@@ -830,37 +838,37 @@ def _prepare_installer(
     """
     tempdir = Path(gettempdir())
 
-    remote_genconf_dir = 'genconf'
+    remote_genconf_dir = "genconf"
     remote_genconf_path = remote_dcos_installer.parent / remote_genconf_dir
 
     node.send_file(
         local_path=ip_detect_path,
-        remote_path=remote_genconf_path / 'ip-detect',
+        remote_path=remote_genconf_path / "ip-detect",
         transport=transport,
         user=user,
         sudo=True,
     )
 
-    serve_dir_path = remote_genconf_path / 'serve'
-    bootstrap_url = 'file://{serve_dir_path}'.format(
+    serve_dir_path = remote_genconf_path / "serve"
+    bootstrap_url = "file://{serve_dir_path}".format(
         serve_dir_path=serve_dir_path,
     )
-    extra_config = {'bootstrap_url': bootstrap_url}
+    extra_config = {"bootstrap_url": bootstrap_url}
     dcos_config = {**dcos_config, **extra_config}
     config_yaml = yaml.dump(data=dcos_config)
-    config_file_path = tempdir / 'config.yaml'
+    config_file_path = tempdir / "config.yaml"
     Path(config_file_path).write_text(data=config_yaml)
 
     node.send_file(
         local_path=config_file_path,
-        remote_path=remote_genconf_path / 'config.yaml',
+        remote_path=remote_genconf_path / "config.yaml",
         transport=transport,
         user=user,
         sudo=True,
     )
 
     for host_path, installer_path in files_to_copy_to_genconf_dir:
-        relative_installer_path = installer_path.relative_to('/genconf')
+        relative_installer_path = installer_path.relative_to("/genconf")
         destination_path = remote_genconf_path / relative_installer_path
         node.send_file(
             local_path=host_path,
@@ -922,13 +930,13 @@ def _install_dcos_from_node_path(
     )
 
     genconf_args = [
-        'cd',
+        "cd",
         str(remote_dcos_installer.parent),
-        '&&',
-        'bash',
+        "&&",
+        "bash",
         str(remote_dcos_installer),
-        '-v',
-        '--genconf',
+        "-v",
+        "--genconf",
     ]
 
     node.run(
@@ -941,7 +949,7 @@ def _install_dcos_from_node_path(
     )
 
     node.run(
-        args=['rm', str(remote_dcos_installer)],
+        args=["rm", str(remote_dcos_installer)],
         output=output,
         transport=transport,
         user=user,
@@ -949,12 +957,12 @@ def _install_dcos_from_node_path(
     )
 
     setup_args = [
-        'cd',
+        "cd",
         str(remote_dcos_installer.parent),
-        '&&',
-        'bash',
-        'genconf/serve/dcos_install.sh',
-        '--no-block-dcos-setup',
+        "&&",
+        "bash",
+        "genconf/serve/dcos_install.sh",
+        "--no-block-dcos-setup",
         role.value,
     ]
 
@@ -993,8 +1001,8 @@ def _node_installer_path(
     Returns:
         A path to put a new DC/OS installer in on the node.
     """
-    workspace_dir = Path('/dcos-install-dir') / uuid.uuid4().hex
-    mkdir_args = ['mkdir', '--parents', str(workspace_dir)]
+    workspace_dir = Path("/dcos-install-dir") / uuid.uuid4().hex
+    mkdir_args = ["mkdir", "--parents", str(workspace_dir)]
     node.run(
         args=mkdir_args,
         user=user,
@@ -1003,7 +1011,7 @@ def _node_installer_path(
         output=output,
     )
 
-    return workspace_dir / 'dcos_generate_config.sh'
+    return workspace_dir / "dcos_generate_config.sh"
 
 
 def _download_installer_to_node(
@@ -1018,10 +1026,10 @@ def _download_installer_to_node(
     Download a DC/OS installer to a node.
     """
     curl_args = [
-        'curl',
-        '-f',
+        "curl",
+        "-f",
         dcos_installer_url,
-        '-o',
+        "-o",
         str(node_path),
     ]
     node.run(
@@ -1097,11 +1105,11 @@ def _upgrade_dcos_from_node_path(
             args=[
                 # We source this file to guarantee that we have Python 3 on
                 # our path as ``python``.
-                '.',
-                '/opt/mesosphere/environment.export',
-                '&&',
-                'python',
-                '-c',
+                ".",
+                "/opt/mesosphere/environment.export",
+                "&&",
+                "python",
+                "-c",
                 shlex.quote(python_to_find_open_port),
             ],
             shell=True,
@@ -1116,14 +1124,14 @@ def _upgrade_dcos_from_node_path(
     open_port_number = int(open_port_result.stdout.decode())
 
     genconf_args = [
-        'cd',
+        "cd",
         str(remote_dcos_installer.parent),
-        '&&',
-        'PORT={open_port}'.format(open_port=open_port_number),
-        'bash',
+        "&&",
+        "PORT={open_port}".format(open_port=open_port_number),
+        "bash",
         str(remote_dcos_installer),
-        '-v',
-        '--generate-node-upgrade-script',
+        "-v",
+        "--generate-node-upgrade-script",
         node.dcos_build_info().version,
     ]
 
@@ -1146,10 +1154,10 @@ def _upgrade_dcos_from_node_path(
     )
 
     last_line = result.stdout.decode().split()[-1]
-    upgrade_script_path = Path(last_line.split('file://')[-1])
+    upgrade_script_path = Path(last_line.split("file://")[-1])
 
     node.run(
-        args=['rm', str(remote_dcos_installer)],
+        args=["rm", str(remote_dcos_installer)],
         output=output,
         transport=transport,
         user=user,
@@ -1158,16 +1166,16 @@ def _upgrade_dcos_from_node_path(
 
     if role in (Role.AGENT, Role.PUBLIC_AGENT):
         node.run(
-            args=['rm', '-f', '/opt/mesosphere/lib/libltdl.so.7'],
+            args=["rm", "-f", "/opt/mesosphere/lib/libltdl.so.7"],
             sudo=True,
             output=output,
         )
 
     setup_args = [
-        'cd',
+        "cd",
         str(remote_dcos_installer.parent),
-        '&&',
-        'bash',
+        "&&",
+        "bash",
         str(upgrade_script_path),
     ]
 

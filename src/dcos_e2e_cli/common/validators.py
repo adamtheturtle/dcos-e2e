@@ -28,11 +28,11 @@ def validate_path_pair(
 
     for path_pair in value:
         try:
-            [local_path, remote_path] = list(map(Path, path_pair.split(':')))
+            [local_path, remote_path] = list(map(Path, path_pair.split(":")))
         except ValueError:
             message = (
                 '"{path_pair}" is not in the format '
-                '/absolute/local/path:/remote/path.'
+                "/absolute/local/path:/remote/path."
             ).format(path_pair=path_pair)
             raise click.BadParameter(message=message)
 

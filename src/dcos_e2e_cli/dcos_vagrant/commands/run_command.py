@@ -30,7 +30,7 @@ from ._nodes import node_option
 from .inspect_cluster import inspect_cluster
 
 
-@click.command('run', context_settings=dict(ignore_unknown_options=True))
+@click.command("run", context_settings=dict(ignore_unknown_options=True))
 @existing_cluster_id_option
 @node_args_argument
 @dcos_login_uname_option

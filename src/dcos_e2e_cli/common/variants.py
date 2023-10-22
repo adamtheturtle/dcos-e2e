@@ -43,10 +43,10 @@ def get_install_variant(
     Raises:
         CalledProcessError: There was an error unpacking the installer.
     """
-    if given_variant == 'auto':
+    if given_variant == "auto":
         assert installer_path is not None
         spinner = Halo(enabled=enable_spinner)
-        spinner.start(text='Determining DC/OS variant')
+        spinner.start(text="Determining DC/OS variant")
         try:
             details = installer_tools.get_dcos_installer_details(
                 installer=installer_path,
@@ -57,7 +57,7 @@ def get_install_variant(
             spinner.stop()
             click.echo(doctor_message)
             click.echo()
-            click.echo('Original error:', err=True)
+            click.echo("Original error:", err=True)
             click.echo(exc.stderr, err=True)
             raise
         except ValueError as exc:
@@ -72,8 +72,8 @@ def get_install_variant(
         return variant_map[details.variant]
 
     return {
-        'oss': DCOSVariant.OSS,
-        'enterprise': DCOSVariant.ENTERPRISE,
+        "oss": DCOSVariant.OSS,
+        "enterprise": DCOSVariant.ENTERPRISE,
     }[given_variant]
 
 

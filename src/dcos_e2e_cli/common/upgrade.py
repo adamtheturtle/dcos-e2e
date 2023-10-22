@@ -44,7 +44,7 @@ def cluster_upgrade_dcos_from_path(
         enable_spinner: Whether to enable the spinner animation.
     """
     spinner = Halo(enabled=enable_spinner)
-    spinner.start('Upgrading DC/OS')
+    spinner.start("Upgrading DC/OS")
 
     try:
         cluster.upgrade_dcos_from_path(
@@ -91,7 +91,7 @@ def cluster_upgrade_dcos_from_url(
         enable_spinner: Whether to enable the spinner animation.
     """
     spinner = Halo(enabled=enable_spinner)
-    spinner.start('Upgrading DC/OS')
+    spinner.start("Upgrading DC/OS")
 
     try:
         cluster.upgrade_dcos_from_url(

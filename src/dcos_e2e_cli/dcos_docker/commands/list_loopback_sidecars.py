@@ -12,15 +12,15 @@ from ._common import (
 )
 
 
-@click.command('list-loopback-sidecars')
+@click.command("list-loopback-sidecars")
 def list_loopback_sidecars() -> None:
     """
     List loopback sidecars.
     """
     client = docker_client()
     filters = {
-        'label': [
-            '{key}={value}'.format(
+        "label": [
+            "{key}={value}".format(
                 key=NODE_TYPE_LABEL_KEY,
                 value=NODE_TYPE_LOOPBACK_SIDECAR_LABEL_VALUE,
             ),

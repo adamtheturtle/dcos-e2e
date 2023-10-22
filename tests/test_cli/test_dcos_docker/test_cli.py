@@ -29,7 +29,7 @@ class TestHelp:
     """
 
     @pytest.mark.parametrize(
-        'command',
+        "command",
         _COMMANDS,
         ids=[str(cmd) for cmd in _COMMANDS],
     )
@@ -42,17 +42,17 @@ class TestHelp:
         ``bash admin/update_cli_tests.sh``.
         """
         runner = CliRunner()
-        arguments = ['docker'] + command + ['--help']
+        arguments = ["docker"] + command + ["--help"]
         result = runner.invoke(minidcos, arguments, catch_exceptions=False)
         assert result.exit_code == 0
-        help_output_filename = '-'.join(['dcos-docker'] + command) + '.txt'
-        help_outputs_dir = Path(__file__).parent / 'help_outputs'
+        help_output_filename = "-".join(["dcos-docker"] + command) + ".txt"
+        help_outputs_dir = Path(__file__).parent / "help_outputs"
         expected_help_file = help_outputs_dir / help_output_filename
         try:
             expected_help = expected_help_file.read_text()
             assert result.output == expected_help
         except (AssertionError, FileNotFoundError):  # pragma: no cover
-            if os.getenv('FIX_CLI_TESTS') == '1':
+            if os.getenv("FIX_CLI_TESTS") == "1":
                 help_outputs_dir.mkdir(exist_ok=True)
                 expected_help_file.touch()
                 expected_help_file.write_text(result.output)
@@ -77,11 +77,11 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--copy-to-master',
-                '/some/path',
+                "--copy-to-master",
+                "/some/path",
             ],
             catch_exceptions=False,
         )
@@ -107,11 +107,11 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--copy-to-master',
-                '/some/path:some/remote',
+                "--copy-to-master",
+                "/some/path:some/remote",
             ],
             catch_exceptions=False,
         )
@@ -130,12 +130,12 @@ class TestCreate:
         assert result.output == expected_message
 
     @pytest.mark.parametrize(
-        'option',
+        "option",
         [
-            '--custom-volume',
-            '--custom-master-volume',
-            '--custom-agent-volume',
-            '--custom-public-agent-volume',
+            "--custom-volume",
+            "--custom-master-volume",
+            "--custom-agent-volume",
+            "--custom-public-agent-volume",
         ],
     )
     def test_custom_volume_bad_mode(
@@ -150,11 +150,11 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
                 option,
-                '/opt:/opt:ab',
+                "/opt:/opt:ab",
             ],
             catch_exceptions=False,
         )
@@ -173,12 +173,12 @@ class TestCreate:
         assert result.output == expected_message
 
     @pytest.mark.parametrize(
-        'option',
+        "option",
         [
-            '--custom-volume',
-            '--custom-master-volume',
-            '--custom-agent-volume',
-            '--custom-public-agent-volume',
+            "--custom-volume",
+            "--custom-master-volume",
+            "--custom-agent-volume",
+            "--custom-public-agent-volume",
         ],
     )
     def test_custom_volume_bad_format(
@@ -193,11 +193,11 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
                 option,
-                '/opt:/opt:/opt:rw',
+                "/opt:/opt:/opt:rw",
             ],
             catch_exceptions=False,
         )
@@ -222,18 +222,18 @@ class TestCreate:
         """
         An error is shown if the given local path is not an absolute path.
         """
-        _, temporary_file_path = mkstemp(dir='.')
+        _, temporary_file_path = mkstemp(dir=".")
         relative_path = Path(temporary_file_path).relative_to(os.getcwd())
 
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--copy-to-master',
-                '{relative}:some/remote'.format(relative=relative_path),
+                "--copy-to-master",
+                "{relative}:some/remote".format(relative=relative_path),
             ],
             catch_exceptions=False,
         )
@@ -259,7 +259,7 @@ class TestCreate:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'create', '/not/a/path'],
+            ["docker", "create", "/not/a/path"],
             catch_exceptions=False,
         )
         assert result.exit_code == 2
@@ -274,14 +274,14 @@ class TestCreate:
         An error is shown if the ``--extra-config`` file does not exist.
         """
         runner = CliRunner()
-        invalid_path = '/' + uuid.uuid4().hex
+        invalid_path = "/" + uuid.uuid4().hex
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--extra-config',
+                "--extra-config",
                 invalid_path,
             ],
             catch_exceptions=False,
@@ -307,15 +307,15 @@ class TestCreate:
         ``--extra-config``.
         """
         invalid_file = tmp_path / uuid.uuid4().hex
-        invalid_file.write_text('@')
+        invalid_file.write_text("@")
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--extra-config',
+                "--extra-config",
                 str(invalid_file),
             ],
             catch_exceptions=False,
@@ -340,15 +340,15 @@ class TestCreate:
         a key-value mapping.
         """
         invalid_file = tmp_path / uuid.uuid4().hex
-        invalid_file.write_text('example')
+        invalid_file.write_text("example")
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--extra-config',
+                "--extra-config",
                 str(invalid_file),
             ],
             catch_exceptions=False,
@@ -367,7 +367,7 @@ class TestCreate:
         # yapf: enable
         assert result.output == expected_message
 
-    @pytest.mark.parametrize('invalid_id', ['@', ''])
+    @pytest.mark.parametrize("invalid_id", ["@", ""])
     def test_invalid_cluster_id(
         self,
         oss_installer: Path,
@@ -380,10 +380,10 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--cluster-id',
+                "--cluster-id",
                 invalid_id,
             ],
             catch_exceptions=False,
@@ -411,11 +411,11 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--genconf-dir',
-                'non-existing',
+                "--genconf-dir",
+                "non-existing",
             ],
             catch_exceptions=False,
         )
@@ -434,25 +434,24 @@ class TestCreate:
         """
         Genconf path must be a directory.
         """
-        genconf_file = tmp_path / 'testfile'
-        genconf_file.write_text('test')
+        genconf_file = tmp_path / "testfile"
+        genconf_file.write_text("test")
 
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--genconf-dir',
+                "--genconf-dir",
                 str(genconf_file),
             ],
             catch_exceptions=False,
         )
         assert result.exit_code == 2
         expected_error = (
-            'Error: Invalid value for "--genconf-dir": '
-            'Directory "{path}" is a file.'
+            'Error: Invalid value for "--genconf-dir": ' 'Directory "{path}" is a file.'
         ).format(path=str(genconf_file))
         assert expected_error in result.output
 
@@ -464,11 +463,11 @@ class TestCreate:
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--workspace-dir',
-                'non-existing',
+                "--workspace-dir",
+                "non-existing",
             ],
             catch_exceptions=False,
         )
@@ -487,17 +486,17 @@ class TestCreate:
         """
         ``--workspace-dir`` must be a directory.
         """
-        workspace_file = tmp_path / 'testfile'
-        workspace_file.write_text('test')
+        workspace_file = tmp_path / "testfile"
+        workspace_file.write_text("test")
 
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'create',
+                "docker",
+                "create",
                 str(oss_installer),
-                '--workspace-dir',
+                "--workspace-dir",
                 str(workspace_file),
             ],
             catch_exceptions=False,
@@ -523,7 +522,7 @@ class TestDestroy:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'destroy', '--cluster-id', unique],
+            ["docker", "destroy", "--cluster-id", unique],
         )
         assert result.exit_code == 2
         expected_error = 'Cluster "{unique}" does not exist'
@@ -544,7 +543,7 @@ class TestDestroyList:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'destroy-list', unique],
+            ["docker", "destroy-list", unique],
             catch_exceptions=False,
         )
         assert result.exit_code == 0
@@ -561,7 +560,7 @@ class TestDestroyList:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'destroy-list', unique, unique_2],
+            ["docker", "destroy-list", unique, unique_2],
             catch_exceptions=False,
         )
         assert result.exit_code == 0
@@ -585,7 +584,7 @@ class TestInspect:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'inspect', '--cluster-id', unique],
+            ["docker", "inspect", "--cluster-id", unique],
         )
         assert result.exit_code == 2
         expected_error = 'Cluster "{unique}" does not exist'
@@ -606,7 +605,7 @@ class TestWait:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'wait', '--cluster-id', unique],
+            ["docker", "wait", "--cluster-id", unique],
         )
         assert result.exit_code == 2
         expected_error = 'Cluster "{unique}" does not exist'
@@ -626,13 +625,13 @@ class TestDoctor:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'doctor'],
+            ["docker", "doctor"],
             catch_exceptions=False,
         )
         assert result.exit_code == 0
 
 
-class TestSetupMacNetwork():
+class TestSetupMacNetwork:
     """
     Tests for the ``setup-mac-network`` subcommand.
     """
@@ -642,15 +641,15 @@ class TestSetupMacNetwork():
         If a configuration file does not have the 'ovpn' suffix, an error is
         shown.
         """
-        configuration_file = tmp_path / 'example.txt'
-        configuration_file.write_text('example')
+        configuration_file = tmp_path / "example.txt"
+        configuration_file.write_text("example")
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'setup-mac-network',
-                '--configuration-dst',
+                "docker",
+                "setup-mac-network",
+                "--configuration-dst",
                 str(configuration_file),
             ],
             catch_exceptions=False,
@@ -677,16 +676,16 @@ class TestSetupMacNetwork():
         is shown.
         """
         profile_name = uuid.uuid4().hex
-        configuration_filename = str(Path(profile_name).with_suffix('.ovpn'))
+        configuration_filename = str(Path(profile_name).with_suffix(".ovpn"))
         configuration_file = tmp_path / configuration_filename
-        configuration_file.write_text('example')
+        configuration_file.write_text("example")
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
             [
-                'docker',
-                'setup-mac-network',
-                '--configuration-dst',
+                "docker",
+                "setup-mac-network",
+                "--configuration-dst",
                 str(configuration_file),
             ],
             catch_exceptions=False,
@@ -725,18 +724,18 @@ class TestCreateLoopbackSidecar:
         """
         An error is shown if the given sidecar container already exists.
         """
-        test_sidecar = 'test-sidecar'
+        test_sidecar = "test-sidecar"
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'create-loopback-sidecar', test_sidecar],
+            ["docker", "create-loopback-sidecar", test_sidecar],
         )
         assert result.exit_code == 0
 
         try:
             result = runner.invoke(
                 minidcos,
-                ['docker', 'create-loopback-sidecar', test_sidecar],
+                ["docker", "create-loopback-sidecar", test_sidecar],
             )
             assert result.exit_code == 2
             expected_error = 'Loopback sidecar "{name}" already exists'
@@ -745,7 +744,7 @@ class TestCreateLoopbackSidecar:
         finally:
             result = runner.invoke(
                 minidcos,
-                ['docker', 'destroy-loopback-sidecar', test_sidecar],
+                ["docker", "destroy-loopback-sidecar", test_sidecar],
             )
             assert result.exit_code == 0
 
@@ -759,11 +758,11 @@ class TestDestroyLoopbackSidecar:
         """
         An error is shown if the given sidecar container does not exist.
         """
-        does_not_exist = 'does-not-exist'
+        does_not_exist = "does-not-exist"
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'destroy-loopback-sidecar', does_not_exist],
+            ["docker", "destroy-loopback-sidecar", does_not_exist],
         )
         assert result.exit_code == 2
         expected_error = 'Loopback sidecar "{name}" does not exist'
@@ -783,7 +782,7 @@ class TestListLoopbackSidecars:
         runner = CliRunner()
         result = runner.invoke(
             minidcos,
-            ['docker', 'list-loopback-sidecars'],
+            ["docker", "list-loopback-sidecars"],
             catch_exceptions=False,
         )
         assert result.exit_code == 0

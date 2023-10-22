@@ -15,7 +15,7 @@ from ._common import (
 )
 
 
-@click.command('clean')
+@click.command("clean")
 @verbosity_option
 def clean() -> None:
     """
@@ -25,8 +25,8 @@ def clean() -> None:
     client = docker_client()
 
     filters = {
-        'label': [
-            '{key}={value}'.format(
+        "label": [
+            "{key}={value}".format(
                 key=NODE_TYPE_LABEL_KEY,
                 value=NODE_TYPE_LOOPBACK_SIDECAR_LABEL_VALUE,
             ),
@@ -36,8 +36,8 @@ def clean() -> None:
     for loopback_sidecar in loopback_sidecars:
         DockerLoopbackVolume.destroy(container=loopback_sidecar)
 
-    node_filters = {'name': Docker().container_name_prefix}
-    network_filters = {'name': Docker().container_name_prefix}
+    node_filters = {"name": Docker().container_name_prefix}
+    network_filters = {"name": Docker().container_name_prefix}
 
     node_containers = client.containers.list(filters=node_filters, all=True)
 

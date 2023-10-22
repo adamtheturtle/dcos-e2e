@@ -27,7 +27,7 @@ def command_path(
     """
     command_path_list = sibling_ctx.command_path.split()
     command_path_list[-1] = command.name
-    return ' '.join(command_path_list)
+    return " ".join(command_path_list)
 
 
 def check_cluster_id_unique(

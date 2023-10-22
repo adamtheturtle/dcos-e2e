@@ -51,28 +51,28 @@ def wait_for_dcos(
         enable_spinner: Whether to enable the spinner animation.
     """
     message = (
-        'A cluster may take some time to be ready.\n'
-        'The amount of time it takes to start a cluster depends on a variety '
-        'of factors.\n'
-        'If you are concerned that this is hanging, try '
+        "A cluster may take some time to be ready.\n"
+        "The amount of time it takes to start a cluster depends on a variety "
+        "of factors.\n"
+        "If you are concerned that this is hanging, try "
         '"{doctor_command_name}" to diagnose common issues.'
     ).format(doctor_command_name=doctor_command_name)
     click.echo(message)
 
     no_login_message = (
-        'If you cancel this command while it is running, '
-        'you may not be able to log in. '
-        'To resolve that, run this command again.'
+        "If you cancel this command while it is running, "
+        "you may not be able to log in. "
+        "To resolve that, run this command again."
     )
 
     spinner = Halo(enabled=enable_spinner)
-    spinner.start(text='Waiting for DC/OS variant')
+    spinner.start(text="Waiting for DC/OS variant")
     _wait_for_variant(cluster=cluster)
     dcos_variant = get_cluster_variant(cluster=cluster)
     spinner.succeed()
     if dcos_variant == DCOSVariant.OSS:
         click.echo(no_login_message)
-    spinner.start(text='Waiting for DC/OS to start')
+    spinner.start(text="Waiting for DC/OS to start")
     try:
         if dcos_variant == DCOSVariant.ENTERPRISE:
             cluster.wait_for_dcos_ee(
@@ -83,7 +83,7 @@ def wait_for_dcos(
         else:
             cluster.wait_for_dcos_oss(http_checks=http_checks)
     except DCOSTimeoutError:
-        spinner.fail(text='Waiting for DC/OS to start timed out.')
+        spinner.fail(text="Waiting for DC/OS to start timed out.")
         sys.exit(1)
 
     spinner.succeed()

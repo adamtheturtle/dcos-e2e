@@ -22,7 +22,7 @@ def _validate_environment_variable(
     env = {}
     for definition in value:
         try:
-            key, val = definition.split(sep='=', maxsplit=1)
+            key, val = definition.split(sep="=", maxsplit=1)
         except ValueError:
             message = (
                 '"{definition}" does not match the format "<KEY>=<VALUE>".'
@@ -32,16 +32,19 @@ def _validate_environment_variable(
     return env
 
 
-def environment_variables_option(command: Callable[..., None],
-                                 ) -> Callable[..., None]:
+def environment_variables_option(
+    command: Callable[..., None],
+) -> Callable[..., None]:
     """
     An option decorator for setting environment variables.
     """
     function = click.option(
-        '--env',
+        "--env",
         type=str,
         callback=_validate_environment_variable,
         multiple=True,
         help='Set environment variables in the format "<KEY>=<VALUE>"',
-    )(command)  # type: Callable[..., None]
+    )(
+        command
+    )  # type: Callable[..., None]
     return function

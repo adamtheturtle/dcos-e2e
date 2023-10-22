@@ -18,7 +18,7 @@ from ._common import ClusterInstances, existing_cluster_ids
 from ._options import aws_region_option
 
 
-@click.command('sync', help=SYNC_HELP)
+@click.command("sync", help=SYNC_HELP)
 @existing_cluster_id_option
 @dcos_checkout_dir_argument
 @aws_region_option

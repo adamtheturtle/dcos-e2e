@@ -32,13 +32,13 @@ def _wait_for_ssh(node: Node) -> None:
     # In theory we could just use any args and specify the transport as SSH.
     # However, this would not work on macOS without a special network set up.
     args = [
-        'systemctl',
-        'status',
-        'sshd.socket',
-        '||',
-        'systemctl',
-        'status',
-        'sshd',
+        "systemctl",
+        "status",
+        "sshd.socket",
+        "||",
+        "systemctl",
+        "status",
+        "sshd",
     ]
     node.run(
         args=args,
@@ -91,7 +91,7 @@ class Cluster(ContextDecorator):
         masters: Set[Node],
         agents: Set[Node],
         public_agents: Set[Node],
-    ) -> 'Cluster':
+    ) -> "Cluster":
         """
         Create a cluster from existing nodes.
 
@@ -265,9 +265,7 @@ class Cluster(ContextDecorator):
                     dcos_config=dcos_config,
                     ip_detect_path=ip_detect_path,
                     role=role,
-                    files_to_copy_to_genconf_dir=(
-                        files_to_copy_to_genconf_dir
-                    ),
+                    files_to_copy_to_genconf_dir=(files_to_copy_to_genconf_dir),
                     output=output,
                 )
 
@@ -304,13 +302,11 @@ class Cluster(ContextDecorator):
                     dcos_config=dcos_config,
                     ip_detect_path=ip_detect_path,
                     role=role,
-                    files_to_copy_to_genconf_dir=(
-                        files_to_copy_to_genconf_dir
-                    ),
+                    files_to_copy_to_genconf_dir=(files_to_copy_to_genconf_dir),
                     output=output,
                 )
 
-    def __enter__(self) -> 'Cluster':
+    def __enter__(self) -> "Cluster":
         """
         Enter a context manager.
         The context manager receives this ``Cluster`` instance.
@@ -348,9 +344,9 @@ class Cluster(ContextDecorator):
             return list(map(lambda node: str(node.private_ip_address), nodes))
 
         config = {
-            'agent_list': ip_list(nodes=self.agents),
-            'master_list': ip_list(nodes=self.masters),
-            'public_agent_list': ip_list(nodes=self.public_agents),
+            "agent_list": ip_list(nodes=self.agents),
+            "master_list": ip_list(nodes=self.masters),
+            "public_agent_list": ip_list(nodes=self.public_agents),
         }
         return {
             **config,
@@ -391,19 +387,19 @@ class Cluster(ContextDecorator):
             subprocess.CalledProcessError: If the command fails.
         """
         args = [
-            '.',
-            '/opt/mesosphere/environment.export',
-            '&&',
-            'cd',
-            '/opt/mesosphere/active/dcos-integration-test/',
-            '&&',
+            ".",
+            "/opt/mesosphere/environment.export",
+            "&&",
+            "cd",
+            "/opt/mesosphere/active/dcos-integration-test/",
+            "&&",
             *args,
         ]
 
         env = env or {}
 
         def ip_addresses(nodes: Iterable[Node]) -> str:
-            return ','.join(
+            return ",".join(
                 map(lambda node: str(node.private_ip_address), nodes),
             )
 
@@ -412,14 +408,14 @@ class Cluster(ContextDecorator):
 
         environment_variables = {
             # This is needed for 1.9 (and below?)
-            'PUBLIC_MASTER_HOSTS': ip_addresses(self.masters),
-            'MASTER_HOSTS': ip_addresses(self.masters),
-            'SLAVE_HOSTS': ip_addresses(self.agents),
-            'PUBLIC_SLAVE_HOSTS': ip_addresses(self.public_agents),
-            'DCOS_DNS_ADDRESS': 'http://' + str(node.private_ip_address),
+            "PUBLIC_MASTER_HOSTS": ip_addresses(self.masters),
+            "MASTER_HOSTS": ip_addresses(self.masters),
+            "SLAVE_HOSTS": ip_addresses(self.agents),
+            "PUBLIC_SLAVE_HOSTS": ip_addresses(self.public_agents),
+            "DCOS_DNS_ADDRESS": "http://" + str(node.private_ip_address),
             # This is only used by DC/OS 1.9 integration tests
-            'DCOS_NUM_MASTERS': len(self.masters),
-            'DCOS_NUM_AGENTS': len(self.agents) + len(self.public_agents),
+            "DCOS_NUM_MASTERS": len(self.masters),
+            "DCOS_NUM_AGENTS": len(self.agents) + len(self.public_agents),
             **env,
         }
 

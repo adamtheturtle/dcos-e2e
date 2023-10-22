@@ -22,29 +22,29 @@ def make_linux_binaries(repo_root: Path) -> Set[Path]:
     Returns:
         A set of paths to the built binaries.
     """
-    client = docker.from_env(version='auto')
-    dist_dir = repo_root / 'dist'
+    client = docker.from_env(version="auto")
+    dist_dir = repo_root / "dist"
     assert not dist_dir.exists() or not set(dist_dir.iterdir())
 
-    target_dir = '/e2e'
+    target_dir = "/e2e"
     code_mount = Mount(
         source=str(repo_root.absolute()),
         target=target_dir,
-        type='bind',
+        type="bind",
     )
 
     cmd_in_container = [
-        'pip',
-        'install',
-        '.[packaging]',
-        '&&',
-        'python',
-        'admin/create_pyinstaller_binaries.py',
+        "pip",
+        "install",
+        ".[packaging]",
+        "&&",
+        "python",
+        "admin/create_pyinstaller_binaries.py",
     ]
-    command = 'bash -c "{cmd}"'.format(cmd=' '.join(cmd_in_container))
+    command = 'bash -c "{cmd}"'.format(cmd=" ".join(cmd_in_container))
 
     container = client.containers.run(
-        image='python:3.7',
+        image="python:3.7",
         mounts=[code_mount],
         command=command,
         working_dir=target_dir,
@@ -55,6 +55,6 @@ def make_linux_binaries(repo_root: Path) -> Set[Path]:
         line = line.strip()
         LOGGER.info(line)
 
-    status_code = container.wait()['StatusCode']
+    status_code = container.wait()["StatusCode"]
     assert status_code == 0
     return set(dist_dir.iterdir())

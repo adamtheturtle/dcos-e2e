@@ -20,7 +20,7 @@ def _validate_volumes(
         pass
     mounts = []
     for volume_definition in value:
-        parts = volume_definition.split(':')
+        parts = volume_definition.split(":")
 
         if len(parts) == 1:
             host_src = None
@@ -31,9 +31,9 @@ def _validate_volumes(
             read_only = False
         elif len(parts) == 3:
             host_src, container_dst, mode = parts
-            if mode == 'ro':
+            if mode == "ro":
                 read_only = True
-            elif mode == 'rw':
+            elif mode == "rw":
                 read_only = False
             else:
                 message = (
@@ -47,16 +47,16 @@ def _validate_volumes(
         else:
             message = (
                 '"{volume_definition}" is not a valid volume definition. '
-                'See '
-                'https://docs.docker.com/engine/reference/run/#volume-shared-filesystems '  # noqa: E501
-                'for the syntax to use.'
+                "See "
+                "https://docs.docker.com/engine/reference/run/#volume-shared-filesystems "  # noqa: E501
+                "for the syntax to use."
             ).format(volume_definition=volume_definition)
             raise click.BadParameter(message=message)
 
         mount = docker.types.Mount(
             source=host_src,
             target=container_dst,
-            type='bind',
+            type="bind",
             read_only=read_only,
         )
         mounts.append(mount)
@@ -77,34 +77,36 @@ def _volume_option_factory(
             type=str,
             callback=_validate_volumes,
             help=(
-                'Bind mount a volume on all {container_type} node containers. '
-                'See '
-                'https://docs.docker.com/engine/reference/run/#volume-shared-filesystems '  # noqa: E501
-                'for the syntax to use.'
+                "Bind mount a volume on all {container_type} node containers. "
+                "See "
+                "https://docs.docker.com/engine/reference/run/#volume-shared-filesystems "  # noqa: E501
+                "for the syntax to use."
             ).format(container_type=container_type),
             multiple=True,
-        )(command)  # type: Callable[..., None]
+        )(
+            command
+        )  # type: Callable[..., None]
         return function
 
     return new_volume_option
 
 
 VOLUME_OPTION = _volume_option_factory(
-    name='--custom-volume',
-    container_type='cluster',
+    name="--custom-volume",
+    container_type="cluster",
 )
 
 MASTER_VOLUME_OPTION = _volume_option_factory(
-    name='--custom-master-volume',
-    container_type='cluster master',
+    name="--custom-master-volume",
+    container_type="cluster master",
 )
 
 AGENT_VOLUME_OPTION = _volume_option_factory(
-    name='--custom-agent-volume',
-    container_type='cluster agent',
+    name="--custom-agent-volume",
+    container_type="cluster agent",
 )
 
 PUBLIC_AGENT_VOLUME_OPTION = _volume_option_factory(
-    name='--custom-public-agent-volume',
-    container_type='cluster public agent',
+    name="--custom-public-agent-volume",
+    container_type="cluster public agent",
 )

@@ -33,8 +33,8 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('upgrade')
-@click.argument('installer_url', type=str)
+@click.command("upgrade")
+@click.argument("installer_url", type=str)
 @existing_cluster_id_option
 @verbosity_option
 @extra_config_option

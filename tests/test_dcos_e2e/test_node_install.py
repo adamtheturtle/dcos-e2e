@@ -83,9 +83,8 @@ class TestCopyFiles:
             agents=0,
             public_agents=0,
         ) as cluster:
-
-            (master, ) = cluster.masters
-            ip_detect_file = tmp_path / 'ip-detect'
+            (master,) = cluster.masters
+            ip_detect_file = tmp_path / "ip-detect"
             ip_detect_contents = dedent(
                 """\
                 #!/bin/bash
@@ -101,13 +100,13 @@ class TestCopyFiles:
                 # Test that this overwrites the ``ip-detect`` script given
                 # by ``ip_detect_path``.
                 files_to_copy_to_genconf_dir=[
-                    (ip_detect_file, Path('/genconf/ip-detect')),
+                    (ip_detect_file, Path("/genconf/ip-detect")),
                 ],
                 role=Role.MASTER,
                 output=Output.LOG_AND_CAPTURE,
             )
             cluster.wait_for_dcos_oss()
             cat_result = master.run(
-                args=['cat', '/opt/mesosphere/bin/detect_ip'],
+                args=["cat", "/opt/mesosphere/bin/detect_ip"],
             )
             assert cat_result.stdout.decode() == ip_detect_contents

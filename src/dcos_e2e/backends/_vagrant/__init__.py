@@ -22,13 +22,11 @@ class Vagrant(ClusterBackend):
 
     def __init__(
         self,
-        virtualbox_description: str = '',
+        virtualbox_description: str = "",
         workspace_dir: Optional[Path] = None,
         vm_memory_mb: int = 2048,
-        vagrant_box_version: str = '~> 0.10',
-        vagrant_box_url: str = (
-            'https://downloads.dcos.io/dcos-vagrant/metadata.json'
-        ),
+        vagrant_box_version: str = "~> 0.10",
+        vagrant_box_url: str = ("https://downloads.dcos.io/dcos-vagrant/metadata.json"),
     ) -> None:
         """
         Create a configuration for a Vagrant cluster backend.
@@ -66,7 +64,7 @@ class Vagrant(ClusterBackend):
         self.vagrant_box_url = vagrant_box_url
 
     @property
-    def cluster_cls(self) -> Type['VagrantCluster']:
+    def cluster_cls(self) -> Type["VagrantCluster"]:
         """
         Return the :class:`ClusterManager` class to use to create and manage a
         cluster.
@@ -79,7 +77,7 @@ class Vagrant(ClusterBackend):
         Return the path to the Vagrant specific ``ip-detect`` script.
         """
         current_parent = Path(__file__).parent.resolve()
-        return current_parent / 'resources' / 'ip-detect'
+        return current_parent / "resources" / "ip-detect"
 
     @property
     def base_config(self) -> Dict[str, Any]:
@@ -89,13 +87,13 @@ class Vagrant(ClusterBackend):
         # See https://jira.d2iq.com/browse/DCOS_OSS-2501
         # for removing "check_time: 'false'".
         return {
-            'check_time': 'false',
-            'cluster_name': 'DCOS',
-            'exhibitor_storage_backend': 'static',
-            'master_discovery': 'static',
-            'resolvers': ['8.8.8.8'],
-            'ssh_port': 22,
-            'ssh_user': 'vagrant',
+            "check_time": "false",
+            "cluster_name": "DCOS",
+            "exhibitor_storage_backend": "static",
+            "master_discovery": "static",
+            "resolvers": ["8.8.8.8"],
+            "ssh_port": 22,
+            "ssh_user": "vagrant",
         }
 
 
@@ -120,10 +118,10 @@ class VagrantCluster(ClusterManager):
             public_agents: The number of public agent nodes to create.
             cluster_backend: Details of the specific Docker backend to use.
         """
-        cluster_id = 'dcos-e2e-{random}'.format(random=uuid.uuid4())
-        self._master_prefix = cluster_id + '-master-'
-        self._agent_prefix = cluster_id + '-agent-'
-        self._public_agent_prefix = cluster_id + '-public-agent-'
+        cluster_id = "dcos-e2e-{random}".format(random=uuid.uuid4())
+        self._master_prefix = cluster_id + "-master-"
+        self._agent_prefix = cluster_id + "-agent-"
+        self._public_agent_prefix = cluster_id + "-public-agent-"
 
         # We work in a new directory.
         # This helps running tests in parallel without conflicts and it
@@ -132,7 +130,7 @@ class VagrantCluster(ClusterManager):
         path = Path(workspace_dir) / uuid.uuid4().hex / cluster_id
         Path(path).mkdir(exist_ok=True, parents=True)
         path = Path(path).resolve()
-        vagrantfile_path = Path(__file__).parent / 'resources' / 'Vagrantfile'
+        vagrantfile_path = Path(__file__).parent / "resources" / "Vagrantfile"
         shutil.copy(src=str(vagrantfile_path), dst=str(path))
 
         vm_names = []
@@ -146,13 +144,13 @@ class VagrantCluster(ClusterManager):
                 vm_names.append(name)
 
         vagrant_env = {
-            'HOME': os.environ['HOME'],
-            'PATH': os.environ['PATH'],
-            'VM_NAMES': ','.join(vm_names),
-            'VM_DESCRIPTION': cluster_backend.virtualbox_description,
-            'VM_MEMORY': str(cluster_backend.vm_memory_mb),
-            'VAGRANT_BOX_VERSION': str(cluster_backend.vagrant_box_version),
-            'VAGRANT_BOX_URL': cluster_backend.vagrant_box_url,
+            "HOME": os.environ["HOME"],
+            "PATH": os.environ["PATH"],
+            "VM_NAMES": ",".join(vm_names),
+            "VM_DESCRIPTION": cluster_backend.virtualbox_description,
+            "VM_MEMORY": str(cluster_backend.vm_memory_mb),
+            "VAGRANT_BOX_VERSION": str(cluster_backend.vagrant_box_version),
+            "VAGRANT_BOX_URL": cluster_backend.vagrant_box_url,
         }
 
         # We import Vagrant here instead of at the top of the file because, if
@@ -161,6 +159,7 @@ class VagrantCluster(ClusterManager):
         # We want to avoid that warning for users of other backends who do not
         # have the Vagrant executable.
         import vagrant
+
         self._vagrant_client = vagrant.Vagrant(
             root=str(path),
             env=vagrant_env,
@@ -247,9 +246,7 @@ class VagrantCluster(ClusterManager):
         """
         client = self._vagrant_client
         hostname_command = "hostname -I | cut -d' ' -f2"
-        virtual_machines = [
-            vm for vm in client.status() if vm.state == 'running'
-        ]
+        virtual_machines = [vm for vm in client.status() if vm.state == "running"]
         for virtual_machine in virtual_machines:
             vm_ip_str = client.ssh(
                 vm_name=virtual_machine.name,
@@ -280,8 +277,9 @@ class VagrantCluster(ClusterManager):
         """
         client = self._vagrant_client
         vagrant_nodes = [
-            vm for vm in client.status()
-            if vm.name.startswith(node_base_name) and vm.state == 'running'
+            vm
+            for vm in client.status()
+            if vm.name.startswith(node_base_name) and vm.state == "running"
         ]
         hostname_command = "hostname -I | cut -d' ' -f2"
         nodes = set([])
@@ -289,7 +287,7 @@ class VagrantCluster(ClusterManager):
             default_user = client.user(vm_name=node.name)
             ssh_key_path = Path(client.keyfile(vm_name=node.name))
 
-            not_ip_chars = ['{', '}', '^', '[', ']']
+            not_ip_chars = ["{", "}", "^", "[", "]"]
 
             node_ip_str = client.ssh(
                 vm_name=node.name,
@@ -297,7 +295,7 @@ class VagrantCluster(ClusterManager):
             ).strip()
 
             for char in not_ip_chars:
-                node_ip_str = node_ip_str.replace(char, '')
+                node_ip_str = node_ip_str.replace(char, "")
 
             node_ip_address = IPv4Address(node_ip_str)
 

@@ -35,7 +35,7 @@ from .doctor import doctor
 from .wait import wait
 
 
-@click.command('install')
+@click.command("install")
 @installer_path_argument
 @extra_config_option
 @workspace_dir_option

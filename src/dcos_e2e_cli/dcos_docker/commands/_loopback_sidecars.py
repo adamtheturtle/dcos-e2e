@@ -20,12 +20,12 @@ def loopback_sidecars_by_name(name: str) -> List[Container]:
     """
     client = docker_client()
     filters = {
-        'label': [
-            '{key}={value}'.format(
+        "label": [
+            "{key}={value}".format(
                 key=NODE_TYPE_LABEL_KEY,
                 value=NODE_TYPE_LOOPBACK_SIDECAR_LABEL_VALUE,
             ),
-            '{key}={value}'.format(
+            "{key}={value}".format(
                 key=SIDECAR_NAME_LABEL_KEY,
                 value=name,
             ),

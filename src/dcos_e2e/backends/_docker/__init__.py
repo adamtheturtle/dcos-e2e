@@ -69,7 +69,7 @@ def _get_open_port() -> int:
     """
     Return a free port.
     """
-    host = ''
+    host = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as new_socket:
         new_socket.bind((host, 0))
         new_socket.listen(1)
@@ -81,13 +81,13 @@ def _get_fallback_storage_driver() -> DockerStorageDriver:
     Return the Docker storage driver to use if one is not given.
     """
     storage_drivers = {
-        'aufs': DockerStorageDriver.AUFS,
-        'overlay': DockerStorageDriver.OVERLAY,
-        'overlay2': DockerStorageDriver.OVERLAY_2,
+        "aufs": DockerStorageDriver.AUFS,
+        "overlay": DockerStorageDriver.OVERLAY,
+        "overlay2": DockerStorageDriver.OVERLAY_2,
     }
 
     try:
-        client = docker.from_env(version='auto')
+        client = docker.from_env(version="auto")
     except docker.errors.DockerException:  # pragma: no cover
         # If Docker is not available it does not matter what backend we choose.
         #
@@ -95,7 +95,7 @@ def _get_fallback_storage_driver() -> DockerStorageDriver:
         # such as Read The Docs which do not have Docker installed.
         return DockerStorageDriver.AUFS
 
-    host_driver = client.info()['Driver']
+    host_driver = client.info()["Driver"]
 
     try:
         return storage_drivers[host_driver]
@@ -114,7 +114,7 @@ class Docker(ClusterBackend):
 
     def __init__(
         self,
-        container_name_prefix: str = 'dcos-e2e',
+        container_name_prefix: str = "dcos-e2e",
         workspace_dir: Optional[Path] = None,
         custom_container_mounts: Optional[List[Mount]] = None,
         custom_master_mounts: Optional[List[Mount]] = None,
@@ -231,8 +231,8 @@ class Docker(ClusterBackend):
         .. _Containers.run:
             http://docker-py.readthedocs.io/en/stable/containers.html#docker.models.containers.ContainerCollection.run
         """
-        self.default_user = 'root'
-        self.bootstrap_tmp_path = Path('/opt/dcos_install_tmp')
+        self.default_user = "root"
+        self.bootstrap_tmp_path = Path("/opt/dcos_install_tmp")
         self.docker_version = docker_version
         self.workspace_dir = workspace_dir or Path(gettempdir())
         self.custom_container_mounts = custom_container_mounts or []
@@ -261,15 +261,15 @@ class Docker(ClusterBackend):
         # ``/sys/fs/cgroup`` is not available, and a mount error is shown.
         # See https://jira.d2iq.com/browse/DCOS_OSS-4475 for details.
         cgroup_mount = Mount(
-            source='/sys/fs/cgroup',
-            target='/sys/fs/cgroup',
+            source="/sys/fs/cgroup",
+            target="/sys/fs/cgroup",
             read_only=True,
-            type='bind',
+            type="bind",
         )
         self.cgroup_mounts = [cgroup_mount] if mount_sys_fs_cgroup else []
 
     @property
-    def cluster_cls(self) -> Type['DockerCluster']:
+    def cluster_cls(self) -> Type["DockerCluster"]:
         """
         Return the ``ClusterManager`` class to use to create and manage a
         cluster.
@@ -282,7 +282,7 @@ class Docker(ClusterBackend):
         Return the path to the Docker specific ``ip-detect`` script.
         """
         current_parent = Path(__file__).parent.resolve()
-        return current_parent / 'resources' / 'ip-detect'
+        return current_parent / "resources" / "ip-detect"
 
     @property
     def base_config(self) -> Dict[str, Any]:
@@ -292,21 +292,21 @@ class Docker(ClusterBackend):
         """
         ssh_user = self.default_user
         return {
-            'bootstrap_url': 'file://' + str(self.bootstrap_tmp_path),
+            "bootstrap_url": "file://" + str(self.bootstrap_tmp_path),
             # Without this, we see errors like:
             # "Time is not synchronized / marked as bad by the kernel.".
             # Adam saw this on Docker for Mac 17.09.0-ce-mac35.
             #
             # In that case this was fixable with:
             #   $ docker run --rm --privileged alpine hwclock -s
-            'check_time': 'false',
-            'cluster_name': 'DCOS',
-            'exhibitor_storage_backend': 'static',
-            'master_discovery': 'static',
-            'process_timeout': 10000,
-            'resolvers': ['8.8.8.8'],
-            'ssh_port': 22,
-            'ssh_user': ssh_user,
+            "check_time": "false",
+            "cluster_name": "DCOS",
+            "exhibitor_storage_backend": "static",
+            "master_discovery": "static",
+            "process_timeout": 10000,
+            "resolvers": ["8.8.8.8"],
+            "ssh_port": 22,
+            "ssh_user": ssh_user,
         }
 
 
@@ -339,7 +339,7 @@ class DockerCluster(ClusterManager):
         # We use the same random string for each container in a cluster so
         # that they can be associated easily.
         #
-        self._cluster_id = '{prefix}-{random}'.format(
+        self._cluster_id = "{prefix}-{random}".format(
             prefix=cluster_backend.container_name_prefix,
             random=str(uuid.uuid4())[:5],
         )
@@ -359,36 +359,36 @@ class DockerCluster(ClusterManager):
         # The way to fix this if we want to be able to put files anywhere is
         # to add an variable to `dcos_generate_config.sh.in` which allows
         # `-v` mounts.
-        self._genconf_dir = self._path / 'genconf'
+        self._genconf_dir = self._path / "genconf"
         self._genconf_dir.mkdir(exist_ok=True, parents=True)
         self._genconf_dir = self._genconf_dir.resolve()
-        include_dir = self._path / 'include'
-        certs_dir = include_dir / 'certs'
+        include_dir = self._path / "include"
+        certs_dir = include_dir / "certs"
         certs_dir.mkdir(parents=True)
-        ssh_dir = include_dir / 'ssh'
+        ssh_dir = include_dir / "ssh"
         ssh_dir.mkdir(parents=True)
 
-        public_key_path = ssh_dir / 'id_rsa.pub'
+        public_key_path = ssh_dir / "id_rsa.pub"
         _write_key_pair(
             public_key_path=public_key_path,
-            private_key_path=ssh_dir / 'id_rsa',
+            private_key_path=ssh_dir / "id_rsa",
         )
 
-        self._master_prefix = self._cluster_id + '-master-'
-        self._agent_prefix = self._cluster_id + '-agent-'
-        self._public_agent_prefix = self._cluster_id + '-public-agent-'
+        self._master_prefix = self._cluster_id + "-master-"
+        self._agent_prefix = self._cluster_id + "-agent-"
+        self._public_agent_prefix = self._cluster_id + "-public-agent-"
 
-        bootstrap_genconf_path = self._genconf_dir / 'serve'
+        bootstrap_genconf_path = self._genconf_dir / "serve"
         bootstrap_genconf_path.mkdir()
 
         # See https://success.docker.com/KBase/Different_Types_of_Volumes
         # for a definition of different types of volumes.
         node_tmpfs_mounts = {
-            '/run': 'rw,exec,nosuid,size=2097152k',
-            '/tmp': 'rw,exec,nosuid,size=2097152k',
+            "/run": "rw,exec,nosuid,size=2097152k",
+            "/tmp": "rw,exec,nosuid,size=2097152k",
         }
 
-        docker_image_tag = 'mesosphere/dcos-docker'
+        docker_image_tag = "mesosphere/dcos-docker"
         build_docker_image(
             tag=docker_image_tag,
             linux_distribution=cluster_backend.linux_distribution,
@@ -397,21 +397,21 @@ class DockerCluster(ClusterManager):
 
         certs_mount = Mount(
             source=str(certs_dir.resolve()),
-            target='/etc/docker/certs.d',
+            target="/etc/docker/certs.d",
             read_only=False,
-            type='bind',
+            type="bind",
         )
 
         bootstrap_genconf_mount = Mount(
             source=str(bootstrap_genconf_path),
             target=str(self._bootstrap_tmp_path),
             read_only=True,
-            type='bind',
+            type="bind",
         )
 
-        var_lib_docker_mount = Mount(source=None, target='/var/lib/docker')
-        opt_mount = Mount(source=None, target='/opt')
-        mesos_slave_mount = Mount(source=None, target='/var/lib/mesos/slave')
+        var_lib_docker_mount = Mount(source=None, target="/var/lib/docker")
+        opt_mount = Mount(source=None, target="/opt")
+        mesos_slave_mount = Mount(source=None, target="/var/lib/mesos/slave")
         # By default systemd-journald uses the ``Storage=auto`` setting which
         # writes journal logs under ``/run/log/journal`` in memory
         # and persists them to ``/var/log/journal``.
@@ -431,12 +431,12 @@ class DockerCluster(ClusterManager):
         # file-system in order to free up memory of each E2E node.
         run_log_journal_mount = Mount(
             source=None,
-            target='/run/log/journal',
+            target="/run/log/journal",
             read_only=False,
         )
         var_log_journal_mount = Mount(
             source=None,
-            target='/var/log/journal',
+            target="/var/log/journal",
             read_only=False,
         )
 
@@ -514,9 +514,7 @@ class DockerCluster(ClusterManager):
                         **labels,
                     },
                     public_key_path=public_key_path,
-                    docker_storage_driver=(
-                        cluster_backend.docker_storage_driver
-                    ),
+                    docker_storage_driver=(cluster_backend.docker_storage_driver),
                     docker_version=cluster_backend.docker_version,
                     network=cluster_backend.network,
                 )
@@ -584,15 +582,15 @@ class DockerCluster(ClusterManager):
         """
         copyfile(
             src=str(ip_detect_path),
-            dst=str(self._genconf_dir / 'ip-detect'),
+            dst=str(self._genconf_dir / "ip-detect"),
         )
 
         config_yaml = yaml.dump(data=dcos_config)
-        config_file_path = self._genconf_dir / 'config.yaml'
+        config_file_path = self._genconf_dir / "config.yaml"
         config_file_path.write_text(data=config_yaml)
 
         for host_path, installer_path in files_to_copy_to_genconf_dir:
-            relative_installer_path = installer_path.relative_to('/genconf')
+            relative_installer_path = installer_path.relative_to("/genconf")
             destination_path = self._genconf_dir / relative_installer_path
             if host_path.is_dir():
                 destination_path = destination_path / host_path.stem
@@ -601,13 +599,13 @@ class DockerCluster(ClusterManager):
                 copyfile(src=str(host_path), dst=str(destination_path))
 
         genconf_args = [
-            'bash',
+            "bash",
             str(dcos_installer),
-            '-v',
-            '--genconf',
+            "-v",
+            "--genconf",
         ]
 
-        installer_ctr = '{cluster_id}-installer'.format(
+        installer_ctr = "{cluster_id}-installer".format(
             cluster_id=self._cluster_id,
         )
         installer_port = _get_open_port()
@@ -627,8 +625,8 @@ class DockerCluster(ClusterManager):
         run_subprocess(
             args=genconf_args,
             env={
-                'PORT': str(installer_port),
-                'DCOS_INSTALLER_CONTAINER_NAME': installer_ctr,
+                "PORT": str(installer_port),
+                "DCOS_INSTALLER_CONTAINER_NAME": installer_ctr,
             },
             log_output_live=log_output_live,
             cwd=str(self._path),
@@ -636,14 +634,14 @@ class DockerCluster(ClusterManager):
         )
 
         for role, nodes in [
-            ('master', self.masters),
-            ('slave', self.agents),
-            ('slave_public', self.public_agents),
+            ("master", self.masters),
+            ("slave", self.agents),
+            ("slave_public", self.public_agents),
         ]:
             dcos_install_args = [
-                '/bin/bash',
-                str(self._bootstrap_tmp_path / 'dcos_install.sh'),
-                '--no-block-dcos-setup',
+                "/bin/bash",
+                str(self._bootstrap_tmp_path / "dcos_install.sh"),
+                "--no-block-dcos-setup",
                 role,
             ]
 
@@ -659,12 +657,12 @@ class DockerCluster(ClusterManager):
         """
         Destroy a node in the cluster.
         """
-        client = docker.from_env(version='auto')
+        client = docker.from_env(version="auto")
         containers = client.containers.list()
         for container in containers:
-            networks = container.attrs['NetworkSettings']['Networks']
+            networks = container.attrs["NetworkSettings"]["Networks"]
             for net in networks:
-                if networks[net]['IPAddress'] == str(node.public_ip_address):
+                if networks[net]["IPAddress"] == str(node.public_ip_address):
                     container.stop()
                     container.remove(v=True)
 
@@ -685,25 +683,25 @@ class DockerCluster(ClusterManager):
         Returns: ``Node``s corresponding to containers with names starting
             with ``container_base_name``.
         """
-        client = docker.from_env(version='auto')
-        filters = {'name': container_base_name}
+        client = docker.from_env(version="auto")
+        filters = {"name": container_base_name}
         containers = client.containers.list(filters=filters)
 
         nodes = set([])
         for container in containers:
-            networks = container.attrs['NetworkSettings']['Networks']
-            network_name = 'bridge'
+            networks = container.attrs["NetworkSettings"]["Networks"]
+            network_name = "bridge"
             if len(networks) != 1:
-                [network_name] = list(networks.keys() - set(['bridge']))
+                [network_name] = list(networks.keys() - set(["bridge"]))
             container_ip_address = IPv4Address(
-                networks[network_name]['IPAddress'],
+                networks[network_name]["IPAddress"],
             )
             nodes.add(
                 Node(
                     public_ip_address=container_ip_address,
                     private_ip_address=container_ip_address,
                     default_user=self._default_user,
-                    ssh_key_path=self._path / 'include' / 'ssh' / 'id_rsa',
+                    ssh_key_path=self._path / "include" / "ssh" / "id_rsa",
                     default_transport=self._default_transport,
                 ),
             )

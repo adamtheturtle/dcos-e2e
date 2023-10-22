@@ -37,7 +37,7 @@ from ._options import (
 from .doctor import doctor
 
 
-@click.command('provision')
+@click.command("provision")
 @masters_option
 @agents_option
 @public_agents_option
@@ -100,4 +100,4 @@ def provision(
     nodes = {*cluster.masters, *cluster.agents, *cluster.public_agents}
     for node in nodes:
         if enable_selinux_enforcing:
-            node.run(args=['setenforce', '1'], sudo=True)
+            node.run(args=["setenforce", "1"], sudo=True)

@@ -20,7 +20,7 @@ class ClusterManager(abc.ABC):
         masters: int,
         agents: int,
         public_agents: int,
-        cluster_backend: 'ClusterBackend',
+        cluster_backend: "ClusterBackend",
     ) -> None:
         """
         Create a DC/OS cluster with the given ``cluster_backend``.

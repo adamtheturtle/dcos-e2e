@@ -75,7 +75,7 @@ def get_nodes(
             message = (
                 'No node in cluster "{cluster_id}" has the unique reference '
                 '"{node_reference}". '
-                'Node references can be seen with ``{inspect_command}``.'
+                "Node references can be seen with ``{inspect_command}``."
             ).format(
                 cluster_id=cluster_id,
                 node_reference=node_reference,

@@ -46,22 +46,22 @@ def _compose_docker_command(
     container = _container_from_ip_address(ip_address=public_ip_address)
 
     docker_exec_args = [
-        'docker',
-        'exec',
-        '--user',
+        "docker",
+        "exec",
+        "--user",
         user,
     ]
 
     # Do not cover this because there is currently no test for
     # using this in a terminal in the CI.
     if sys.stdin.isatty():  # pragma: no cover
-        docker_exec_args.append('--interactive')
+        docker_exec_args.append("--interactive")
 
     if tty:
-        docker_exec_args.append('--tty')
+        docker_exec_args.append("--tty")
 
     for key, value in env.items():
-        set_env = ['--env', '{key}={value}'.format(key=key, value=str(value))]
+        set_env = ["--env", "{key}={value}".format(key=key, value=str(value))]
         docker_exec_args += set_env
 
     docker_exec_args.append(container.id)
@@ -183,10 +183,10 @@ class DockerExecTransport(NodeTransport):
         """
         container = _container_from_ip_address(ip_address=public_ip_address)
         args = [
-            'docker',
-            'cp',
+            "docker",
+            "cp",
             str(local_path),
-            container.id + ':' + str(remote_path),
+            container.id + ":" + str(remote_path),
         ]
         run_subprocess(
             args=args,
@@ -215,9 +215,9 @@ class DockerExecTransport(NodeTransport):
         """
         container = _container_from_ip_address(ip_address=public_ip_address)
         args = [
-            'docker',
-            'cp',
-            container.id + ':' + str(remote_path),
+            "docker",
+            "cp",
+            container.id + ":" + str(remote_path),
             str(local_path),
         ]
         run_subprocess(
@@ -231,13 +231,13 @@ def _container_from_ip_address(ip_address: IPv4Address) -> Container:
     """
     Return the ``Container`` with the given ``ip_address``.
     """
-    client = docker.from_env(version='auto')
+    client = docker.from_env(version="auto")
     containers = client.containers.list()
     matching_containers = []
     for container in containers:
-        networks = container.attrs['NetworkSettings']['Networks']
+        networks = container.attrs["NetworkSettings"]["Networks"]
         for net in networks:
-            if networks[net]['IPAddress'] == str(ip_address):
+            if networks[net]["IPAddress"] == str(ip_address):
                 matching_containers.append(container)
 
     assert len(matching_containers) == 1

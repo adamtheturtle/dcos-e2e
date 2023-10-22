@@ -8,8 +8,8 @@ from .dcos_vagrant import dcos_vagrant
 from .minidcos import minidcos
 
 __all__ = [
-    'dcos_aws',
-    'dcos_docker',
-    'dcos_vagrant',
-    'minidcos',
+    "dcos_aws",
+    "dcos_docker",
+    "dcos_vagrant",
+    "minidcos",
 ]

@@ -22,7 +22,7 @@ from .commands.wait import wait
 from .commands.web import web
 
 
-@click.group(name='vagrant')
+@click.group(name="vagrant")
 def dcos_vagrant() -> None:
     """
     Manage DC/OS clusters on Vagrant.

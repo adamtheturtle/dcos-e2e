@@ -18,26 +18,26 @@ def _get_node_distribution(node: Node) -> Distribution:
     Given a `Node`, return the `Distribution` on that node.
     """
     cat_cmd = node.run(
-        args=['cat /etc/*-release'],
+        args=["cat /etc/*-release"],
         shell=True,
     )
 
     version_info = cat_cmd.stdout
     version_info_lines = [
-        line for line in version_info.decode().split('\n') if '=' in line
+        line for line in version_info.decode().split("\n") if "=" in line
     ]
-    version_data = dict(item.split('=') for item in version_info_lines)
+    version_data = dict(item.split("=") for item in version_info_lines)
 
     distributions = {
         ('"centos"', '"7"'): Distribution.CENTOS_7,
         ('"centos"', '"8"'): Distribution.CENTOS_8,
-        ('coreos', '1298.7.0'): Distribution.COREOS,
-        ('flatcar', '2512.2.1'): Distribution.FLATCAR,
-        ('ubuntu', '"16.04"'): Distribution.UBUNTU_16_04,
+        ("coreos", "1298.7.0"): Distribution.COREOS,
+        ("flatcar", "2512.2.1"): Distribution.FLATCAR,
+        ("ubuntu", '"16.04"'): Distribution.UBUNTU_16_04,
     }
 
-    distro_id = version_data['ID'].strip()
-    distro_version_id = version_data['VERSION_ID'].strip()
+    distro_id = version_data["ID"].strip()
+    distro_version_id = version_data["VERSION_ID"].strip()
 
     return distributions[(distro_id, distro_version_id)]
 
@@ -60,7 +60,7 @@ def _oss_distribution_test(
         agents=0,
         public_agents=0,
     ) as cluster:
-        (master, ) = cluster.masters
+        (master,) = cluster.masters
         try:
             cluster.install_dcos_from_path(
                 dcos_installer=oss_installer,
@@ -71,7 +71,7 @@ def _oss_distribution_test(
             cluster.wait_for_dcos_oss()
             node_distribution = _get_node_distribution(node=master)
         except Exception:
-            master.run(['journalctl'], output=Output.LOG_AND_CAPTURE)
+            master.run(["journalctl"], output=Output.LOG_AND_CAPTURE)
             raise
 
     assert node_distribution == distribution
@@ -92,10 +92,10 @@ def _enterprise_distribution_test(
     superuser_username = str(uuid.uuid4())
     superuser_password = str(uuid.uuid4())
     config = {
-        'superuser_username': superuser_username,
-        'superuser_password_hash': sha512_crypt.hash(superuser_password),
-        'fault_domain_enabled': False,
-        'license_key_contents': license_key_contents,
+        "superuser_username": superuser_username,
+        "superuser_password_hash": sha512_crypt.hash(superuser_password),
+        "fault_domain_enabled": False,
+        "license_key_contents": license_key_contents,
     }
 
     cluster_backend = Docker(linux_distribution=distribution)
@@ -105,7 +105,7 @@ def _enterprise_distribution_test(
         agents=0,
         public_agents=0,
     ) as cluster:
-        (master, ) = cluster.masters
+        (master,) = cluster.masters
         try:
             cluster.install_dcos_from_path(
                 dcos_installer=enterprise_installer,
@@ -122,7 +122,7 @@ def _enterprise_distribution_test(
             )
             node_distribution = _get_node_distribution(node=master)
         except Exception:
-            master.run(['journalctl'], output=Output.LOG_AND_CAPTURE)
+            master.run(["journalctl"], output=Output.LOG_AND_CAPTURE)
             raise
 
     assert node_distribution == distribution
@@ -147,7 +147,7 @@ class TestCentos7:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             node_distribution = _get_node_distribution(node=master)
 
         assert node_distribution == Distribution.CENTOS_7
@@ -159,7 +159,7 @@ class TestCentos7:
             agents=0,
             public_agents=0,
         ) as cluster:
-            (master, ) = cluster.masters
+            (master,) = cluster.masters
             node_distribution = _get_node_distribution(node=master)
 
         assert node_distribution == Distribution.CENTOS_7

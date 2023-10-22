@@ -6,8 +6,8 @@ from pathlib import Path
 
 from dcos_e2e.cluster import Cluster
 
-DEFAULT_SUPERUSER_USERNAME = 'bootstrapuser'
-DEFAULT_SUPERUSER_PASSWORD = 'deleteme'
+DEFAULT_SUPERUSER_USERNAME = "bootstrapuser"
+DEFAULT_SUPERUSER_PASSWORD = "deleteme"
 
 
 def add_authorized_key(cluster: Cluster, public_key_path: Path) -> None:
@@ -22,15 +22,15 @@ def add_authorized_key(cluster: Cluster, public_key_path: Path) -> None:
 
     for node in nodes:
         node.run(
-            args=['echo', '', '>>', '/root/.ssh/authorized_keys'],
+            args=["echo", "", ">>", "/root/.ssh/authorized_keys"],
             shell=True,
         )
         node.run(
             args=[
-                'echo',
+                "echo",
                 public_key_path.read_text(),
-                '>>',
-                '/root/.ssh/authorized_keys',
+                ">>",
+                "/root/.ssh/authorized_keys",
             ],
             shell=True,
         )

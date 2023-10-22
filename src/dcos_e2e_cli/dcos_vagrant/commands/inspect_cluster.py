@@ -14,7 +14,7 @@ from dcos_e2e_cli.common.utils import check_cluster_id_exists
 from ._common import ClusterVMs, existing_cluster_ids
 
 
-@click.command('inspect')
+@click.command("inspect")
 @existing_cluster_id_option
 @verbosity_option
 def inspect_cluster(cluster_id: str) -> None:
