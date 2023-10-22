@@ -6,7 +6,6 @@ import click
 
 import dcos_e2e
 
-from ..dcos_aws import dcos_aws
 from ..dcos_docker import dcos_docker
 from ..dcos_vagrant import dcos_vagrant
 
@@ -27,4 +26,3 @@ def minidcos() -> None:
 
 minidcos.add_command(dcos_docker)
 minidcos.add_command(dcos_vagrant)
-minidcos.add_command(dcos_aws)
