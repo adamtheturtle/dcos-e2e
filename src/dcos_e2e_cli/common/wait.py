@@ -5,7 +5,7 @@ Tools for waiting for DC/OS.
 import sys
 
 import click
-from halo import Halo
+
 from retry import retry
 
 from dcos_e2e.cluster import Cluster
@@ -65,14 +65,10 @@ def wait_for_dcos(
         'To resolve that, run this command again.'
     )
 
-    spinner = Halo(enabled=enable_spinner)
-    spinner.start(text='Waiting for DC/OS variant')
     _wait_for_variant(cluster=cluster)
     dcos_variant = get_cluster_variant(cluster=cluster)
-    spinner.succeed()
     if dcos_variant == DCOSVariant.OSS:
         click.echo(no_login_message)
-    spinner.start(text='Waiting for DC/OS to start')
     try:
         if dcos_variant == DCOSVariant.ENTERPRISE:
             cluster.wait_for_dcos_ee(
@@ -83,7 +79,4 @@ def wait_for_dcos(
         else:
             cluster.wait_for_dcos_oss(http_checks=http_checks)
     except DCOSTimeoutError:
-        spinner.fail(text='Waiting for DC/OS to start timed out.')
         sys.exit(1)
-
-    spinner.succeed()

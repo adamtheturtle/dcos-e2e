@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
 
 import click
-import click_pathlib
 import urllib3
 import yaml
 
@@ -116,7 +115,7 @@ def extra_config_option(command: Callable[..., None]) -> Callable[..., None]:
     """
     function = click.option(
         '--extra-config',
-        type=click_pathlib.Path(
+        type=click.Path(
             exists=True,
             file_okay=True,
             dir_okay=False,
@@ -158,7 +157,7 @@ def license_key_option(command: Callable[..., None]) -> Callable[..., None]:
     """
     click_option_function = click.option(
         '--license-key',
-        type=click_pathlib.Path(
+        type=click.Path(
             exists=True,
             file_okay=True,
             dir_okay=False,
@@ -254,7 +253,7 @@ def sync_dir_run_option(command: Callable[..., None]) -> Callable[..., None]:
     """
     click_option_function = click.option(
         '--sync-dir',
-        type=click_pathlib.Path(
+        type=click.Path(
             exists=True,
             dir_okay=True,
             file_okay=False,

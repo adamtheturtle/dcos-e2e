@@ -9,7 +9,7 @@ from shutil import rmtree
 from typing import Optional
 
 import click
-from halo import Halo
+
 
 from dcos_e2e.cluster import Cluster
 from dcos_e2e.exceptions import DCOSNotInstalledError
@@ -45,8 +45,6 @@ def get_install_variant(
     """
     if given_variant == 'auto':
         assert installer_path is not None
-        spinner = Halo(enabled=enable_spinner)
-        spinner.start(text='Determining DC/OS variant')
         try:
             details = installer_tools.get_dcos_installer_details(
                 installer=installer_path,
@@ -54,7 +52,6 @@ def get_install_variant(
             )
         except subprocess.CalledProcessError as exc:
             rmtree(path=str(workspace_dir), ignore_errors=True)
-            spinner.stop()
             click.echo(doctor_message)
             click.echo()
             click.echo('Original error:', err=True)
@@ -64,7 +61,6 @@ def get_install_variant(
             click.echo(str(exc), err=True)
             sys.exit(1)
 
-        spinner.succeed()
         variant_map = {
             installer_tools.DCOSVariant.ENTERPRISE: DCOSVariant.ENTERPRISE,
             installer_tools.DCOSVariant.OSS: DCOSVariant.OSS,

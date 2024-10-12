@@ -9,7 +9,6 @@ from subprocess import CalledProcessError
 from typing import Any, Dict, Optional
 
 import click
-import halo
 from passlib.hash import sha512_crypt
 
 from dcos_e2e.base_classes import ClusterBackend
@@ -84,8 +83,6 @@ def create_cluster(
     Returns:
         A new cluster.
     """
-    spinner = halo.Halo(enabled=enable_spinner)
-    spinner.start(text='Creating cluster')
     try:
         cluster = Cluster(
             cluster_backend=cluster_backend,
@@ -94,7 +91,6 @@ def create_cluster(
             public_agents=public_agents,
         )
     except CalledProcessError as exc:
-        spinner.stop()
         click.echo('Error creating cluster.', err=True)
         click.echo(click.style('Full error:', fg='yellow'))
         click.echo(click.style(textwrap.indent(str(exc), '  '), fg='yellow'))
@@ -102,7 +98,6 @@ def create_cluster(
 
         sys.exit(exc.returncode)
 
-    spinner.succeed()
     return cluster
 
 

@@ -5,7 +5,6 @@ Tools for destroying clusters.
 from typing import List
 
 import click
-from halo import Halo
 
 from dcos_e2e.node import Transport
 from dcos_e2e_cli.common.options import (
@@ -31,16 +30,15 @@ def _destroy_cluster(
         transport: The transport to use for any communication with the cluster.
         enable_spinner: Whether to enable the spinner animation.
     """
-    with Halo(enabled=enable_spinner):
-        check_cluster_id_exists(
-            new_cluster_id=cluster_id,
-            existing_cluster_ids=existing_cluster_ids(),
-        )
-        cluster_containers = ClusterContainers(
-            cluster_id=cluster_id,
-            transport=transport,
-        )
-        cluster_containers.destroy()
+    check_cluster_id_exists(
+        new_cluster_id=cluster_id,
+        existing_cluster_ids=existing_cluster_ids(),
+    )
+    cluster_containers = ClusterContainers(
+        cluster_id=cluster_id,
+        transport=transport,
+    )
+    cluster_containers.destroy()
 
 
 @click.command('destroy-list')

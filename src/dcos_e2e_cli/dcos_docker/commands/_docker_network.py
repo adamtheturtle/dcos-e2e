@@ -24,7 +24,7 @@ def _validate_docker_network(
         pass
     client = docker_client()
     try:
-        return client.networks.get(network_id=value)
+        return client.networks.get(network_id=str(value))
     except docker.errors.NotFound:
         message = (
             'No such Docker network with the name "{value}".\n'

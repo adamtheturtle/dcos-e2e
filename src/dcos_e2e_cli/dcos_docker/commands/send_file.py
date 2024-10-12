@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Tuple
 
 import click
-import click_pathlib
+
 
 from dcos_e2e.node import Transport
 from dcos_e2e_cli.common.nodes import get_nodes
@@ -27,8 +27,8 @@ from .inspect_cluster import inspect_cluster
 @node_transport_option
 @node_option
 @verbosity_option
-@click.argument('source', type=click_pathlib.Path(exists=True))
-@click.argument('destination', type=click_pathlib.Path())
+@click.argument('source', type=click.Path(exists=True))
+@click.argument('destination', type=click.Path())
 @click.pass_context
 def send_file(
     ctx: click.core.Context,

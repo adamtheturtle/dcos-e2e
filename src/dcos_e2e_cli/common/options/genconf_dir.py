@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Union
 
 import click
-import click_pathlib
+
 
 
 def get_files_to_copy_to_genconf_dir(
@@ -39,7 +39,7 @@ def genconf_dir_option(command: Callable[..., None]) -> Callable[..., None]:
     click_option_function = click.option(
         '--genconf-dir',
         'files_to_copy_to_genconf_dir',
-        type=click_pathlib.Path(
+        type=click.Path(
             exists=True,
             dir_okay=True,
             file_okay=False,

@@ -1,3 +1,0 @@
-"""
-Commands for ``minidcos vagrant``.
-"""

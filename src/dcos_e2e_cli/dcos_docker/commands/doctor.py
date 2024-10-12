@@ -13,6 +13,7 @@ import docker
 
 from dcos_e2e.backends import Docker
 from dcos_e2e.cluster import Cluster
+from docker.errors import BuildError, InvalidVersion, APIError
 from dcos_e2e.docker_versions import DockerVersion
 from dcos_e2e_cli.common.doctor import (
     CheckLevels,
@@ -240,17 +241,14 @@ def _check_mount_tmp() -> CheckLevels:
                 },
             },
         )
-    except docker.errors.APIError as exc:
+    except APIError as exc:
         message = (
             'There was an error mounting the temporary directory path '
             '"{tmp_path}" in container: \n\n'
             '{exception_detail}'
         ).format(
             tmp_path=tmp_path,
-            exception_detail=exc.explanation.decode(
-                'ascii',
-                'backslashreplace',
-            ),
+            exception_detail=exc.explanation,
         )
         error(message=message)
         highest_level = CheckLevels.ERROR
@@ -340,7 +338,7 @@ def _check_docker_supports_mounts() -> CheckLevels:
             mounts=[mount],
             detach=True,
         )
-    except docker.errors.InvalidVersion as exc:
+    except InvalidVersion as exc:
         if 'mounts param is not supported' in str(exc):
             message = (
                 'The Docker API version must be >= 1.30. '
@@ -377,7 +375,7 @@ def _check_systemd() -> CheckLevels:
             mounts=[cgroup_mount],
             detach=True,
         )
-    except docker.errors.APIError as exc:
+    except APIError as exc:
         expected = (
             'bind mount source path does not exist: /sys/fs/cgroup/systemd"'
         )
@@ -425,7 +423,7 @@ def _check_mount_var() -> CheckLevels:
             mounts=[var_mount],
             detach=True,
         )
-    except docker.errors.APIError as exc:
+    except APIError as exc:
         expected = 'bind mount source path does not exist: {source}'.format(
             source=source,
         )
@@ -474,7 +472,7 @@ def _check_can_build() -> CheckLevels:
     try:
         with Cluster(cluster_backend=cluster_backend):
             pass
-    except docker.errors.BuildError as exc:
+    except BuildError as exc:
         message = (
             'There was an error building a Docker image. '
             'The Docker logs follow.\n'

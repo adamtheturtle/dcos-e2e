@@ -6,9 +6,7 @@ import click
 
 import dcos_e2e
 
-from ..dcos_aws import dcos_aws
 from ..dcos_docker import dcos_docker
-from ..dcos_vagrant import dcos_vagrant
 
 _CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -26,5 +24,3 @@ def minidcos() -> None:
 
 
 minidcos.add_command(dcos_docker)
-minidcos.add_command(dcos_vagrant)
-minidcos.add_command(dcos_aws)

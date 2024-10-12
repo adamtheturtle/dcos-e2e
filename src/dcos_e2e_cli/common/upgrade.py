@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Tuple
 
 import click
-from halo import Halo
+
 
 from dcos_e2e.cluster import Cluster
 from dcos_e2e.node import Output
@@ -43,8 +43,6 @@ def cluster_upgrade_dcos_from_path(
             use if installation fails.
         enable_spinner: Whether to enable the spinner animation.
     """
-    spinner = Halo(enabled=enable_spinner)
-    spinner.start('Upgrading DC/OS')
 
     try:
         cluster.upgrade_dcos_from_path(
@@ -55,13 +53,10 @@ def cluster_upgrade_dcos_from_path(
             output=Output.LOG_AND_CAPTURE,
         )
     except subprocess.CalledProcessError as exc:
-        spinner.stop()
         show_calledprocess_error(exc=exc)
         click.echo(doctor_message)
         cluster_representation.destroy()
         sys.exit(exc.returncode)
-
-    spinner.succeed()
 
 
 def cluster_upgrade_dcos_from_url(
@@ -90,9 +85,6 @@ def cluster_upgrade_dcos_from_url(
             use if installation fails.
         enable_spinner: Whether to enable the spinner animation.
     """
-    spinner = Halo(enabled=enable_spinner)
-    spinner.start('Upgrading DC/OS')
-
     try:
         cluster.upgrade_dcos_from_url(
             dcos_installer=dcos_installer,
@@ -102,10 +94,7 @@ def cluster_upgrade_dcos_from_url(
             output=Output.LOG_AND_CAPTURE,
         )
     except subprocess.CalledProcessError as exc:
-        spinner.stop()
         show_calledprocess_error(exc=exc)
         click.echo(doctor_message)
         cluster_representation.destroy()
         sys.exit(exc.returncode)
-
-    spinner.succeed()

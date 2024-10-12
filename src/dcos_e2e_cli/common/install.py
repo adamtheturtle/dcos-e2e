@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Tuple
 
 import click
-from halo import Halo
+
 
 import dcos_e2e_cli.common.wait
 from dcos_e2e.cluster import Cluster
@@ -45,9 +45,6 @@ def cluster_install_dcos_from_path(
             use if installation fails.
         enable_spinner: Whether to enable the spinner animation.
     """
-    spinner = Halo(enabled=enable_spinner)
-    spinner.start('Installing DC/OS')
-
     # We allow a cluster to be passed in rather than just inferring it from
     # ``cluster_representation`` in case the ``cluster`` has a more efficient
     # installation method than a ``Cluster.from_nodes``.
@@ -62,14 +59,11 @@ def cluster_install_dcos_from_path(
             output=Output.LOG_AND_CAPTURE,
         )
     except subprocess.CalledProcessError as exc:
-        spinner.stop()
         click.echo('Error installing DC/OS.', err=True)
         show_calledprocess_error(exc=exc)
         click.echo(doctor_message)
         cluster_representation.destroy()
         sys.exit(exc.returncode)
-
-    spinner.succeed()
 
 
 def cluster_install_dcos_from_url(
@@ -98,9 +92,6 @@ def cluster_install_dcos_from_url(
             use if installation fails.
         enable_spinner: Whether to enable the spinner animation.
     """
-    spinner = Halo(enabled=enable_spinner)
-    spinner.start('Installing DC/OS')
-
     # We allow a cluster to be passed in rather than just inferring it from
     # ``cluster_representation`` in case the ``cluster`` has a more efficient
     # installation method than a ``Cluster.from_nodes``.
@@ -115,14 +106,11 @@ def cluster_install_dcos_from_url(
             output=Output.LOG_AND_CAPTURE,
         )
     except subprocess.CalledProcessError as exc:
-        spinner.stop()
         click.echo('Error installing DC/OS.', err=True)
         show_calledprocess_error(exc=exc)
         click.echo(doctor_message)
         cluster_representation.destroy()
         sys.exit(exc.returncode)
-
-    spinner.succeed()
 
 
 def run_post_install_steps(
