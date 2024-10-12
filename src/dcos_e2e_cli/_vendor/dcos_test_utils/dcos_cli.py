@@ -197,7 +197,7 @@ class DcosCliConfiguration:
     def __init__(self, cli: DcosCli):
         self.cli = cli
 
-    def get(self, key: str, default: str=None):
+    def get(self, key: str, default: Optional[str]=None):
         """Retrieves configuration value from CLI
 
         :param key: key to grab from CLI config

@@ -6,6 +6,7 @@ Invoking this module will effectively lower the level of the messages from
 the targed modules by one level.
 """
 import logging
+from typing import Optional
 
 LOGGING_FORMAT = '[%(asctime)s|%(name)s|%(levelname)s]: %(message)s'
 
@@ -14,7 +15,7 @@ MODULE_BROWN_LIST = [
     'boto3']
 
 
-def setup(log_level_str: str, noisy_modules: list=None):
+def setup(log_level_str: str, noisy_modules: Optional[list]=None):
     """ Handles the builtin python log levels and adds level below
     debug (trace) which dampened modules will log debug at
 

@@ -6,6 +6,7 @@ import retrying
 import requests
 
 from ..dcos_test_utils import helpers
+from typing import Optional
 
 REQUIRED_HEADERS = {'Accept': 'application/json, text/plain, */*'}
 log = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ class Jobs(helpers.RetryCommonHttpErrorsMixin, helpers.ApiClientSession):
     :param session: option session to bootstrap this session with
     :type session: requests.Session
     """
-    def __init__(self, default_url: helpers.Url, session: requests.Session=None):
+    def __init__(self, default_url: helpers.Url, session: Optional[requests.Session]=None):
         super().__init__(default_url)
         if session is not None:
             self.session = session

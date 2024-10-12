@@ -13,6 +13,7 @@ from contextlib import contextmanager
 import retrying
 
 from ..dcos_test_utils import helpers
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -328,7 +329,7 @@ class AsyncSshClient(SshClient):
         result['host'] = host
         return result
 
-    async def run_command_on_hosts(self, coroutine_name: str, *args, sem: asyncio.Semaphore=None) -> list:
+    async def run_command_on_hosts(self, coroutine_name: str, *args, sem: Optional[asyncio.Semaphore]=None) -> list:
         """ Starts and waits upon tasks running across all hosts
 
         Args:

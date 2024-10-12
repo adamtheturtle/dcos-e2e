@@ -20,6 +20,7 @@ from ..dcos_test_utils.helpers import (
     RetryCommonHttpErrorsMixin,
     check_json
 )
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class Diagnostics(ARNodeApiClientMixin, RetryCommonHttpErrorsMixin, ApiClientSes
         self.all_slaves = all_slaves
         self.use_legacy_api = use_legacy_api
 
-    def start_diagnostics_job(self, nodes: dict=None):
+    def start_diagnostics_job(self, nodes: Optional[dict]=None):
         """ POSTs to the endpoint that triggers diagnostics report creation
 
         :param nodes: JSON-like definition of nodes
@@ -67,7 +68,7 @@ class Diagnostics(ARNodeApiClientMixin, RetryCommonHttpErrorsMixin, ApiClientSes
     def _start_diagnostics_job(self):
         return self.put('/diagnostics/' + str(uuid.uuid1()))
 
-    def _legacy_start_diagnostics_job(self, nodes: dict = None):
+    def _legacy_start_diagnostics_job(self, nodes: Optional[dict] = None):
         if nodes is None:
             nodes = {"nodes": ["all"]}
         return self.post('/report/diagnostics/create', json=nodes)
